@@ -1,5 +1,18 @@
 # Vision and Language Encoder Similarity Project
 
+## Generation of embeddings
+In `generate_embeds.py`, replace the `CIFAR_ROOT`with the appropriate path to the CIFAR-10 dataset.
+To generate the embeddings, run `get_embeds.py` with the model and dataset flags, e.g.
+
+```bash
+python get_embeds.py -m vit -d cifar10
+```
+
+The CIFAR-10 dataset will be downloaded automatically if it is not already present in the `datasets` folder, COCO has to be downloaded manually.
+Generation speed is around 4 it/s on MPS, 70 it/s on a V100.
+
+---
+
 This project is an implementation of the paper "Do Vision and Language Encoders Represent the World Similarly?". It aims to explore the similarities between vision and language encoders by comparing their representations of the world.
 
 ## Setup 
