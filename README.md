@@ -1,1 +1,1 @@
-# latent-communication
+# Repository for Case Studies in Nonlinear Optimization
