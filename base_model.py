@@ -1,7 +1,8 @@
-
 import torch.nn as nn
+from abc import abstractmethod
 
-class base_model(nn.Module):
+
+class BaseModel(nn.Module):
     @abstractmethod
     def decode(self, z):
         """
@@ -16,7 +17,6 @@ class base_model(nn.Module):
         """
         pass
 
-
     @abstractmethod
     def forward(self, x):
         """
@@ -24,11 +24,9 @@ class base_model(nn.Module):
         Using reparameterization trick to sample from the latent space.
         """
         pass
-    
-    
 
     @abstractmethod
-    def getLatenSpace(self, x):
+    def get_latent_space(self, x):
         """
         Returns the latent space representation of the input. Last Layer of the Encoder before the mean and variance.
         """
