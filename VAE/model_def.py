@@ -1,9 +1,6 @@
 
 import torch.nn as nn
-import os
-# Set wd to the root directory
 
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
 from base_model import base_model
 
 class VAE(base_model):
