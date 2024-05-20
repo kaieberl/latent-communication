@@ -1,5 +1,6 @@
 
 import torch.nn as nn
+from abc import abstractmethod
 
 class base_model(nn.Module):
     @abstractmethod
