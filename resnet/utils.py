@@ -58,8 +58,8 @@ def visualize_latent_space_tsne(latents,labels,perplexity=10,fig_path=None,ancho
     plt.show()
 
 #Get latent vectors
-def get_latent_vectors(encoder, data_loader, max_batches=None):
-    encoder.eval()
+def get_latent_vectors(model, data_loader, max_batches=None):
+    model.eval()
     encoded_images = []
     labels_list = []
     num_batches_processed = 0
@@ -67,7 +67,7 @@ def get_latent_vectors(encoder, data_loader, max_batches=None):
     for images, labels in data_loader:
         # Encode images using the encoder part of the model
         with torch.no_grad():  # Ensure no gradients are calculated
-            encoded_output = encoder(images)
+            encoded_output = model.encode(images)
 
         # Append the encoded images and corresponding labels to lists
         encoded_images.append(encoded_output.cpu())  # Store on CPU

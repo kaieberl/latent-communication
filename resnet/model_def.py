@@ -2,10 +2,14 @@ import torch.nn as nn
 import torchvision
 import torchvision.models as models
 import sys
-sys.path.append('../')
-from base_model import base_model	
+import os 
+sys.path.append(os.path.join(os.getcwd(),'latent-communication'))#for google drive
+#os.chdir(os.path.join(os.getcwd(),'latent-communication'))
+#sys.path.append('../')
+from base_model import BaseModel	
 
-class ResNet(base_model):
+
+class ResNet(BaseModel):
     def __init__(self, pretrained = True):
         super(ResNet, self).__init__()
         model_resnet18 = models.resnet18(pretrained=pretrained)
@@ -36,7 +40,7 @@ class ResNet(base_model):
         out = self.fc(z)
         return out
 
-    def getLatenSpace(self, x):
+    def get_latent_space(self, x):
         x = self.encode(x)
         return x
 
