@@ -84,36 +84,3 @@ def get_latent_vectors(encoder, data_loader, max_batches=None):
     return encoded_images, labels_tensor
 
 
-class ResNetFeatrueExtractor18(nn.Module):
-    def __init__(self, pretrained = True):
-        super(ResNetFeatrueExtractor18, self).__init__()
-        model_resnet18 = models.resnet18(pretrained=pretrained)
-        self.conv1 = model_resnet18.conv1
-        self.bn1 = model_resnet18.bn1
-        self.relu = model_resnet18.relu
-        self.maxpool = model_resnet18.maxpool
-        self.layer1 = model_resnet18.layer1
-        self.layer2 = model_resnet18.layer2
-        self.layer3 = model_resnet18.layer3
-        self.layer4 = model_resnet18.layer4
-        self.avgpool = model_resnet18.avgpool
-
-    def forward(self, x):
-        x = self.relu(self.bn1(self.conv1(x)))
-        x = self.maxpool(x)
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
-        x = self.avgpool(x)
-        x = x.view(x.size(0), -1)
-
-        return x
-
-class ResClassifier(nn.Module):
-    def __init__(self, dropout_p=0.5): #in_features=512
-        super(ResClassifier, self).__init__()
-        self.fc = nn.Linear(512, 10)
-    def forward(self, x):
-        out = self.fc(x)
-        return out
