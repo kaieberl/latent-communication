@@ -1,16 +1,19 @@
 import lightning as L
 import torch
 import torch.utils.data
-from lightning import Trainer, LightningModule
+from lightning import Trainer
 from torch import optim
-from torch.nn import functional as F
+import torch.nn.functional as F
 from torchvision import models
 from torchvision.datasets import MNIST
 from torchvision.transforms import transforms
+from tqdm import tqdm
+
+from base_model import LightningBaseModel
 
 
 class MNISTDataModule(L.LightningDataModule):
-    def __init__(self, data_dir=".", batch_size=16):
+    def __init__(self, data_dir=".", batch_size=128):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
@@ -34,10 +37,11 @@ class MNISTDataModule(L.LightningDataModule):
                                            batch_size=self.batch_size, shuffle=False)
 
 
-class MNISTClassifier(LightningModule):
+class MNISTClassifier(LightningBaseModel):
     def __init__(self):
         super().__init__()
         self.model = models.vit_b_16(weights=None, num_classes=10)
+        # self.model = models.vit_b_16(weights="imagenet21k+imagenet2012", pretrained=True, num_classes=10)
 
     def forward(self, x):
         return self.model(x)
@@ -61,23 +65,59 @@ class MNISTClassifier(LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=1e-3)
-        return optimizer
+        optimizer = optim.Adam(self.parameters(), lr=8e-3, weight_decay=0.1)
+        lr_scheduler = optim.lr_scheduler.LambdaLR(optimizer, lambda epoch: 1 - epoch / 7)
+        return [optimizer], [lr_scheduler]
+
+    def encode(self, x):
+        """
+        Encodes the input by passing through the encoder network and returns the intermediate layer output.
+        """
+        # Reshape and permute the input tensor
+        x = self.model._process_input(x)
+        n = x.shape[0]
+
+        # Expand the class token to the full batch
+        batch_class_token = self.model.class_token.expand(n, -1, -1)
+        x = torch.cat([batch_class_token, x], dim=1)
+
+        x = self.model.encoder(x)
+
+        # [CLS] token
+        return x[:, 0]
+
+    def decode(self, z):
+        """
+        Takes the latent code as input and returns the reconstructed image.
+        """
+        return self.model.heads(z)
+
+    @torch.no_grad()
+    def get_latent_space(self, dataloader):
+        """
+        Returns the latent space representation of the input.
+        """
+        latents = []
+        labels = []
+        dataloader = torch.utils.data.DataLoader(dataloader.dataset, batch_size=dataloader.batch_size, shuffle=False)
+        for images, targets in tqdm(dataloader):
+            images = images.to(self.device)
+            targets = targets.to(self.device)
+            latents.append(self.encode(images))
+            labels.append(targets)
+        return torch.cat(latents), torch.cat(labels)
 
 
-# Define your seeds
-seeds = [0, 1, 2, 3, 4]
+if __name__ == '__main__':
+    seeds = [0, 1, 2]
 
-# Train the model for each seed
-for seed in seeds:
-    # set the seed
-    L.seed_everything(seed)
+    # Train the model for each seed
+    for seed in seeds:
+        L.seed_everything(seed)
 
-    # Train the model
-    data_module = MNISTDataModule()
-    model = MNISTClassifier()
-    trainer = Trainer(max_epochs=10)
-    trainer.fit(model, datamodule=data_module)
+        data_module = MNISTDataModule()
+        model = MNISTClassifier()
+        trainer = Trainer(max_epochs=7)
+        trainer.fit(model, datamodule=data_module)
 
-    # Save the model
-    torch.save(model.state_dict(), f'vit_mnist_seed{seed}.pth')
+        torch.save(model.state_dict(), f'vit_mnist_seed{seed}.pth')
