@@ -97,15 +97,19 @@ class MNISTClassifier(LightningBaseModel):
         """
         Returns the latent space representation of the input.
         """
-        latents = []
-        labels = []
+        total_samples = len(dataloader.dataset)
+        latent_dim = self.model.hidden_dim
+        latents = torch.zeros((total_samples, latent_dim), device=self.device)
+        labels = torch.zeros(total_samples, dtype=torch.long, device=self.device)
         dataloader = torch.utils.data.DataLoader(dataloader.dataset, batch_size=dataloader.batch_size, shuffle=False)
+        start_idx = 0
         for images, targets in tqdm(dataloader):
             images = images.to(self.device)
             targets = targets.to(self.device)
-            latents.append(self.encode(images))
-            labels.append(targets)
-        return torch.cat(latents), torch.cat(labels)
+            latents[start_idx:start_idx + dataloader.batch_size] = self.encode(images)
+            labels[start_idx:start_idx + dataloader.batch_size] = targets
+            start_idx += dataloader.batch_size
+        return latents, labels
 
 
 if __name__ == '__main__':

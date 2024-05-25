@@ -48,6 +48,10 @@ class LightningBaseModel(LightningModule, ABC):
 
 
 class BaseModel(nn.Module, ABC):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     @abstractmethod
     def decode(self, z):
         """
