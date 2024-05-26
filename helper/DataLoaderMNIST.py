@@ -1,21 +1,41 @@
 import torchvision.datasets as datasets
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
+from torch.utils.data import Dataset, Subset
+import numpy as np
 
 class DataLoader_MNIST:
-    def __init__(self, batch_size, transformations):
+    def __init__(self, batch_size, transformation1, transformation2):
+
  
         self.batch_size = batch_size
-        transform = transforms.Compose(transformations)
+        transform1 = transforms.Compose(transformation1)
+        transform2 = transforms.Compose(transformation2)
+
+
         dataset_class = getattr(datasets, 'MNIST')
-        train = dataset_class(root='../data', train=True, download=True, transform=transform)
-        test = dataset_class(root='../data', train=False, download=True, transform=transform)
-        self.train_loader = DataLoader(train, batch_size=self.batch_size, shuffle=True, num_workers=0)
-        self.test_loader = DataLoader(test, batch_size=self.batch_size, shuffle=True, num_workers=0)
+        train1 = dataset_class(root='../data', train=True, download=True, transform=transform1)
+        train2 = dataset_class(root='../data', train=True, download=True, transform=transform2)
+        test1 = dataset_class(root='../data', train=False, download=True, transform=transform1)
+        test2 = dataset_class(root='../data', train=False, download=True, transform=transform2)
+
+        np.random.seed(0)
+        indices = np.random.permutation(len(train1))
+
+        # Step 6: Create Subsets with the same order of indices
+        subset1 = Subset(train1, indices)
+        subset2 = Subset(train2, indices)
+
+        # Step 7: Create DataLoaders
+        train_loader1 = DataLoader(subset1, batch_size=128, shuffle=False, num_workers=0)
+        train_loader2 = DataLoader(subset2, batch_size=128, shuffle=False, num_workers=0)
+
+        test_loader1 = DataLoader(test1, batch_size=128, shuffle=False, num_workers=0)
+        test_loader2 = DataLoader(test2, batch_size=128, shuffle=False, num_workers=0)
     
     def get_train_loader(self):
-        return self.train_loader
+        return self.train_loader1, self.train_loader2
     def get_test_loader(self):
-        return self.test_loader
-    def get_item(self, idx):
-        return self.train_loader.dataset[idx]
+        return self.test_loader1, self.test_loader2
+  
+
