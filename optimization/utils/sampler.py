@@ -15,6 +15,7 @@ def simple_sampler(m,model1,model2, data_loader, DEVICE):
     This function samples the latent space of the model and returns the latent vectors of the model 1 and model2
     """
     images, _ = next(iter(data_loader.train_loader))
+    sample_indices = np.random.choice(images.shape[0], m, replace=False)
     all_images = []
     all_labels = []
     for images, labels in data_loader.train_loader:
