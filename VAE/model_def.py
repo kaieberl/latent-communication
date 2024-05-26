@@ -129,7 +129,8 @@ class VAE(base_model):
             z = self.decode(z)
         return z
     
-    def getLatenSpace(self, x):
+
+    def get_latent_space(self, x):
         """
         Returns the latent space representation of the input. Last Layer of the Encoder before the mean and variance.
         
