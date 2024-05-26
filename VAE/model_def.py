@@ -5,9 +5,9 @@ import torch
 import os
 # Change directory
 os.chdir('/Users/mariotuci/Desktop/Google-Drive/Master/SoSe-24/Project Studies/Project/Code/latent-communication')
-from base_model import base_model
+from base_model import BaseModel
 
-class VAE(base_model):
+class VAE(BaseModel):
 
     def __init__(self,in_dim: int,  dims: int, distribution_dim: int):
         super(VAE, self).__init__()

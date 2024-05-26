@@ -31,8 +31,8 @@ def simple_sampler(m,model1,model2, data_loader, DEVICE):
     all_labels_sample = all_labels[indices]
     
 
-    z1 = model1.getLatenSpace(all_images_sample.to(DEVICE))
-    z2 = model2.getLatenSpace(all_images_sample.to(DEVICE))
+    z1 = model1.get_latent_space(all_images_sample.to(DEVICE))
+    z2 = model2.get_latent_space(all_images_sample.to(DEVICE))
 
     # Detach from GPU
     z1 = z1.detach().cpu().numpy()
@@ -78,8 +78,8 @@ def class_sampler(m, model1, model2, data_loader, DEVICE):
     all_images_sample = all_images[indices]
     all_labels_sample = all_labels[indices]
     # Get latent space 
-    z1 = model1.getLatenSpace(all_images_sample.to(DEVICE))
-    z2 = model2.getLatenSpace(all_images_sample.to(DEVICE))
+    z1 = model1.get_latent_space(all_images_sample.to(DEVICE))
+    z2 = model2.get_latent_space(all_images_sample.to(DEVICE))
 
     # Detach from GPU
     z1 = z1.detach().cpu().numpy()
