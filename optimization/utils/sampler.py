@@ -14,33 +14,39 @@ def simple_sampler(m,model1,model2, data_loader, DEVICE):
 
     This function samples the latent space of the model and returns the latent vectors of the model 1 and model2
     """
-    images, _ = next(iter(data_loader.train_loader))
-    sample_indices = np.random.choice(images.shape[0], m, replace=False)
+    data_loader1, data_loader2 = data_loader.get_train_loader()
+    images, _ = next(iter(data_loader1))
+    images1, _ = next(iter(data_loader2))
     all_images = []
-    all_labels = []
-    for images, labels in data_loader.train_loader:
+
+    all_images2 = []
+
+    for images, labels in data_loader1:
         all_images.append(images)
-        all_labels.append(labels)
+
+    for images, labels in data_loader2:
+        all_images2.append(images)
+
     # Concatenate all the batches to form a single tensor for images and labels
-    all_images = torch.cat(all_images, dim=0)
-    all_labels = torch.cat(all_labels, dim=0)
+    all_images1 = torch.cat(all_images, dim=0)
+   
+    all_images2 = torch.cat(all_images2, dim=0)
+    all_labels2 = torch.cat(all_labels2, dim=0)
     
      # Sample indices from the train set
     indices = np.random.choice(all_images.shape[0], m, replace=False)
 
-    all_images_sample = all_images[indices]
-    all_labels_sample = all_labels[indices]
-    
+    all_images_sample1 = all_images1[indices]
+    all_images_sample2 = all_images2[indices]
 
-    z1 = model1.get_latent_space(all_images_sample.to(DEVICE))
-    z2 = model2.get_latent_space(all_images_sample.to(DEVICE))
+    z1 = model1.get_latent_space(all_images_sample1.to(DEVICE))
+    z2 = model2.get_latent_space(all_images_sample2.to(DEVICE))
 
     # Detach from GPU
     z1 = z1.detach().cpu().numpy()
     z2 = z2.detach().cpu().numpy()  
 
-    return z1, z2, all_images_sample, all_labels_sample
-
+    return z1, z2
 
 def class_sampler(m, model1, model2, data_loader, DEVICE):
     """
@@ -86,4 +92,4 @@ def class_sampler(m, model1, model2, data_loader, DEVICE):
     z1 = z1.detach().cpu().numpy()
     z2 = z2.detach().cpu().numpy()
 
-    return z1, z2, all_images_sample, all_labels_sample
+    return z1, z2
