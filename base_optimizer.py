@@ -66,3 +66,10 @@ class Base_Optimizer():
         Prints the results of the optimization problem.
         """
         pass
+
+    @abstractmethod
+    def save_results(self, path):
+        """
+        Saves the results of the optimization problem.
+        """
+        pass

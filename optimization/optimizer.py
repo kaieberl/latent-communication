@@ -52,6 +52,13 @@ class AffineFitting(Base_Optimizer):
         print(A_aff_opt)
         print(b_aff_opt)
 
+    def save_results(self, path):
+        # As numpy arrays
+        A = self.A_aff.value
+        b = self.b_aff.value
+        np.savez(path, A=A, b=b)
+        return print("Results saved at ", path)
+
 
 class LinearFitting(Base_Optimizer):
     def __init__(self, z1, z2, lamda):
@@ -96,3 +103,9 @@ class LinearFitting(Base_Optimizer):
         opt_value, A_opt = self.get_results()
         print("Optimal value: ", opt_value)
         print(A_opt)
+
+    def save_results(self, path):
+        A = self.A.value
+        np.save(path, A)
+        return print("Results saved at ", path)
+    
