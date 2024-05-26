@@ -72,7 +72,7 @@ class LinearFitting(Base_Optimizer):
         """
         super().__init__(z1, z2)
         self.lamda = lamda
-        self.A = cp.Variable((self.latent_dim1, self.latent_dim2))
+        self.A = cp.Variable((self.latent_dim2, self.latent_dim1))
         self.problem = None
 
     def define_loss(self):
