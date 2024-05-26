@@ -3,19 +3,17 @@ import numpy as np
 import cvxpy as cp
 from abc import abstractmethod
 
-class Base_Optimizer(self,z1,z2):
-    def __init__(self, z1, z2, lamda):
+class Base_Optimizer():
+    def __init__(self, z1, z2):
         """
         Initializes the TransformOptimizer class.
 
         Parameters:
         z1 (np.ndarray): Input data matrix of shape (n_samples, latent_dim1)
         z2 (np.ndarray): Output data matrix of shape (n_samples, latent_dim2)
-        lamda (float): Regularization parameter
         """
         self.z1 = z1
         self.z2 = z2
-        self.lamda = lamda
         self.latent_dim1 = z1.shape[1]
         self.latent_dim2 = z2.shape[1]
 
@@ -30,6 +28,7 @@ class Base_Optimizer(self,z1,z2):
         """
         Defines the optimization problem.
         """
+        print("Defining the problem")
         loss = self.define_loss()
         objective = cp.Minimize(loss)
         self.problem = cp.Problem(objective)
@@ -38,6 +37,7 @@ class Base_Optimizer(self,z1,z2):
         """
         Solves the optimization problem.
         """
+        print("Solving the problem")
         if self.problem is None:
             self.define_problem()
         self.problem.solve()
