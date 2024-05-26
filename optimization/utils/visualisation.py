@@ -8,12 +8,12 @@ def pca_def(v):
     pca.fit(v)
     return pca
 
-def get_latent_space_data(model, data_loader, DEVICE,N=1000):
-    images, _ = next(iter(data_loader.train_loader))
+def get_latent_space_data(model, train_loader, DEVICE,N=1000):
+    images, _ = next(iter(train_loader))
     latent_spaces = []
     all_labels = []
 
-    for images, labels in data_loader.train_loader:
+    for images, labels in train_loader:
         #Exit for loop if all labels is as long as N
         if len(all_labels) > N:
             break
