@@ -2,6 +2,7 @@ from lightning import LightningModule
 from abc import ABC, abstractmethod
 
 import torch.nn as nn
+from abc import abstractmethod
 
 
 class LightningBaseModel(LightningModule, ABC):

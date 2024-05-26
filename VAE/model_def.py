@@ -1,6 +1,10 @@
 
 import torch.nn as nn
-
+import torch
+# get working directory
+import os
+# Change directory
+os.chdir('/Users/mariotuci/Desktop/Google-Drive/Master/SoSe-24/Project Studies/Project/Code/latent-communication')
 from base_model import base_model
 
 class VAE(base_model):
