@@ -17,7 +17,7 @@ class AffineFitting(Base_Optimizer):
         """
         super().__init__(z1, z2)
         self.lamda = lamda
-        self.A_aff = cp.Variable((self.latent_dim1, self.latent_dim2))
+        self.A_aff = cp.Variable((self.latent_dim2, self.latent_dim1))
         self.b_aff = cp.Variable(self.latent_dim2)
         self.problem = None
 
