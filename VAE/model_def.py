@@ -4,7 +4,7 @@ import torch
 # get working directory
 import os
 # Change directory
-os.chdir('/Users/mariotuci/Desktop/Google-Drive/Master/SoSe-24/Project Studies/Project/Code/latent-communication')
+#os.chdir('/Users/mariotuci/Desktop/Google-Drive/Master/SoSe-24/Project Studies/Project/Code/latent-communication')
 from base_model import BaseModel
 
 class VAE(BaseModel):
