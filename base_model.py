@@ -1,3 +1,4 @@
+import torch.utils.data
 from lightning import LightningModule
 from abc import ABC, abstractmethod
 
@@ -11,20 +12,20 @@ class LightningBaseModel(LightningModule, ABC):
         super().__init__(*args, **kwargs)
 
     @abstractmethod
-    def decode(self, z):
+    def decode(self, z: torch.Tensor) -> torch.Tensor:
         """
         Takes the latent code as input and returns the reconstructed image.
         """
         pass
 
     @abstractmethod
-    def encode(self, x):
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
         """
         Encodes the input by passing through the encoder network
         """
         pass
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Passes through the encoder and decoder and returns the output.
         Using reparameterization trick to sample from the latent space.
@@ -33,7 +34,7 @@ class LightningBaseModel(LightningModule, ABC):
         return self.decode(z)
 
     @abstractmethod
-    def get_latent_space(self, x):
+    def get_latent_space(self, x: torch.utils.data.DataLoader) -> torch.Tensor:
         """
         Returns the latent space representation of the input. Last Layer of the Encoder before the mean and variance.
         """
@@ -54,20 +55,20 @@ class BaseModel(nn.Module, ABC):
         super().__init__(*args, **kwargs)
 
     @abstractmethod
-    def decode(self, z):
+    def decode(self, z: torch.Tensor) -> torch.Tensor:
         """
         Takes the latent code as input and returns the reconstructed image.
         """
         pass
 
     @abstractmethod    
-    def encode(self, x):
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
         """"
         Encodes the input by passing through the encoder network
         """
         pass
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Passes through the encoder and decoder and returns the output.
         Using reparameterization trick to sample from the latent space.
@@ -76,7 +77,7 @@ class BaseModel(nn.Module, ABC):
         return self.decode(z)
 
     @abstractmethod
-    def get_latent_space(self, x):
+    def get_latent_space(self, x: torch.utils.data.DataLoader) -> torch.Tensor:
         """
         Returns the latent space representation of the input. Last Layer of the Encoder before the mean and variance.
         """

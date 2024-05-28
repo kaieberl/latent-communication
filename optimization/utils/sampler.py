@@ -1,8 +1,8 @@
-import torch 
 import numpy as np
+import torch
 
 
-def simple_sampler(m,model1,model2, data_loader, DEVICE):
+def simple_sampler(m, model1, model2, data_loader, device):
     """
     Input: 
     - m: Samples 
@@ -29,9 +29,7 @@ def simple_sampler(m,model1,model2, data_loader, DEVICE):
 
     # Concatenate all the batches to form a single tensor for images and labels
     all_images1 = torch.cat(all_images1, dim=0)
-   
     all_images2 = torch.cat(all_images2, dim=0)
-
     
      # Sample indices from the train set
     indices = np.random.choice(all_images1.shape[0], m, replace=False)
@@ -39,16 +37,16 @@ def simple_sampler(m,model1,model2, data_loader, DEVICE):
     all_images_sample1 = all_images1[indices]
     all_images_sample2 = all_images2[indices]
 
-    z1 = model1.get_latent_space(all_images_sample1.to(DEVICE))
-    z2 = model2.get_latent_space(all_images_sample2.to(DEVICE))
+    z1 = model1.encode(all_images_sample1.to(device))
+    z2 = model2.encode(all_images_sample2.to(device))
 
-    # Detach from GPU
     z1 = z1.detach().cpu().numpy()
     z2 = z2.detach().cpu().numpy()  
 
     return z1, z2
 
-def class_sampler(m, model1, model2, data_loader, DEVICE):
+
+def class_sampler(m, model1, model2, data_loader, device):
     """
     Input:
     - m: Samples
@@ -85,8 +83,8 @@ def class_sampler(m, model1, model2, data_loader, DEVICE):
     all_images_sample = all_images[indices]
     all_labels_sample = all_labels[indices]
     # Get latent space 
-    z1 = model1.get_latent_space(all_images_sample.to(DEVICE))
-    z2 = model2.get_latent_space(all_images_sample.to(DEVICE))
+    z1 = model1.get_latent_space(all_images_sample.to(device))
+    z2 = model2.get_latent_space(all_images_sample.to(device))
 
     # Detach from GPU
     z1 = z1.detach().cpu().numpy()
