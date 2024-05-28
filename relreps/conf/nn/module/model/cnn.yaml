@@ -1,3 +1,0 @@
-_target_: rae.modules.cnn.VanillaCNN
-latent_dim: 500
-hidden_dims: null

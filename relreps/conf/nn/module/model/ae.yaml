@@ -1,3 +1,0 @@
-_target_: rae.modules.ae.VanillaAE
-latent_dim: 500
-hidden_dims: null
