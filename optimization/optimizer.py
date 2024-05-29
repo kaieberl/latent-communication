@@ -1,10 +1,7 @@
-# Import relevant libraries
 import numpy as np
 import cvxpy as cp
-from abc import abstractmethod
-import sys
-sys.path.append('../')
-from base_optimizer import Base_Optimizer	
+from base_optimizer import Base_Optimizer
+
 
 class AffineFitting(Base_Optimizer):
     def __init__(self, z1, z2, lamda):

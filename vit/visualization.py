@@ -27,20 +27,25 @@ def visualize_latent_space_pca(latents, labels, fig_path=None, anchors=None, pca
     Visualizes the 2D latent space obtained from PCA.
 
     Args:
-        latents: A tensor of shape (N, C, H, W) representing the latent space.
+        latents: A tensor of shape (N, dim) representing the latent points.
         labels: A tensor of shape (N,) representing the labels for each latent point.
         fig_path: Optional; Path to save the figure.
-        anchors: Optional; A tensor of shape (M, C, H, W) representing anchor points in the latent space.
+        anchors: Optional; A tensor of shape (M, dim) representing anchor points in the latent space.
         pca: Optional; A PCA object to use for transforming the latent space.
         size: Optional; Size of the points in the plot.
         bg_alpha: Optional; Alpha value for the background points.
         alpha: Optional; Alpha value for the highlighted points.
     """
+    if isinstance(latents, torch.Tensor):
+        latents = latents.detach().numpy()
+    if isinstance(labels, torch.Tensor):
+        labels = labels.numpy()
+
     if pca is None:
         pca = PCA(n_components=2)
-        latents_2d = pca.fit_transform(latents.view(latents.size(0), -1).cpu().detach().numpy())
+        latents_2d = pca.fit_transform(latents)
     else:
-        latents_2d = pca.transform(latents.view(latents.size(0), -1).cpu().detach().numpy())
+        latents_2d = pca.transform(latents)
 
     # Normalize latents
     latents_2d -= latents_2d.min(axis=0)
@@ -48,14 +53,14 @@ def visualize_latent_space_pca(latents, labels, fig_path=None, anchors=None, pca
 
     # Create a DataFrame for easy plotting
     latent_df = pd.DataFrame(latents_2d, columns=['x', 'y'])
-    latent_df['target'] = labels.numpy()
+    latent_df['target'] = labels
 
     # Plot the 2D latent space
     fig, ax = plt.subplots(figsize=(6, 6))
     cmap = plt.get_cmap('tab10')
     norm = plt.Normalize(latent_df['target'].min(), latent_df['target'].max())
 
-    ax = plot_latent_space(ax, latent_df, targets=labels.unique(), size=size, cmap=cmap, norm=norm, bg_alpha=bg_alpha, alpha=alpha)
+    ax = plot_latent_space(ax, latent_df, targets=np.unique(labels), size=size, cmap=cmap, norm=norm, bg_alpha=bg_alpha, alpha=alpha)
 
     if anchors is not None:
         # plot anchors with star marker
@@ -80,7 +85,9 @@ def visualize_mapping_error(latent1, errors, fig_path=None):
         fig_path: Optional; Path to save the figure.
     """
     if isinstance(latent1, torch.Tensor):
-        latent1 = latent1.cpu().detach().numpy()
+        latent1 = latent1.detach().numpy()
+    if isinstance(errors, torch.Tensor):
+        errors = errors.numpy()
 
     assert latent1.shape[0] == errors.shape[0], "Number of latent points and errors must match."
 
