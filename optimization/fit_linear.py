@@ -6,7 +6,7 @@ import torchvision.transforms as transforms
 
 from helper.dataloader_mnist import DataLoaderMNIST
 from optimizer import AffineFitting, LinearFitting
-from utils.sampler import vit_simple_sampler
+from utils.sampler import simple_sampler
 from vit.train_vit import MNISTClassifier
 
 # Set device
@@ -48,8 +48,11 @@ def load_model(path):
     return model
 
 
+model1 = load_model(config['path1'])
+model2 = load_model(config['path2'])
+
 # Sampling
-z1, z2, images, labels = vit_simple_sampler(num_samples, config['path1'], config['path2'], data_loader, device)
+z1, z2, images, labels = simple_sampler(num_samples, model1, model2, data_loader, device)
 
 
 # Linear transformation

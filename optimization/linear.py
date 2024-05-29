@@ -39,13 +39,18 @@ if __name__ == "__main__":
     source_data_train = torch.load("../vit/models/latent_space_vit_seed0_train.pt")
     target_data_train = torch.load("../vit/models/latent_space_vit_seed1_train.pt")
 
+    # sample from trainings data
+    torch.manual_seed(0)
+    indices = torch.randperm(source_data_train.size(0))[:100]
+    source_data_train = source_data_train[indices]
+
     source_data_test = torch.load("../vit/models/latent_space_vit_seed0_test.pt")
     target_data_test = torch.load("../vit/models/latent_space_vit_seed1_test.pt")
 
     # Initialize and fit the translator
     translator = LinearMapping(source_data_train.size(1), target_data_train.size(1))
     trainer = Trainer(max_epochs=200)
-    trainer.fit(translator, DataLoader(TensorDataset(source_data_train, target_data_train), batch_size=source_data_train.size(0), shuffle=True), DataLoader(TensorDataset(source_data_test, target_data_test), batch_size=source_data_test.size(0), shuffle=True))
+    trainer.fit(translator, DataLoader(TensorDataset(source_data_train, target_data_train), batch_size=source_data_train.size(0), shuffle=True), DataLoader(TensorDataset(source_data_test, target_data_test), batch_size=source_data_test.size(0)))
     torch.save(translator, "../vit/models/translator_linear.pt")
 
     # Test the translation and plot the error

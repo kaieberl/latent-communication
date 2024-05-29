@@ -7,7 +7,6 @@ from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
 
 sys.path.append("..")
-from resnet.utils import visualize_latent_space_pca
 from vit.train_vit import MNISTDataModule, MNISTClassifier
 
 
@@ -110,7 +109,7 @@ def setup_model(seed, device):
 
 
 def save_latent_space(model, dataloader, prefix, seed):
-    latents, labels = model.get_latent_space(dataloader)
+    latents, labels = model.get_latent_space_from_dataloader(dataloader)
     torch.save(labels, f"models/labels_{prefix}.pt")
     torch.save(latents, f"models/latent_space_vit_seed{seed}_{prefix}.pt")
 

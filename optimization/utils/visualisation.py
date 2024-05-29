@@ -1,5 +1,5 @@
+import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.pyplot as plt 
 from sklearn.decomposition import PCA
 
 
@@ -8,7 +8,8 @@ def pca_def(v):
     pca.fit(v)
     return pca
 
-def get_latent_space_data(model, train_loader, DEVICE,N=1000):
+
+def get_latent_space_data(model, train_loader, DEVICE, N=1000):
     images, _ = next(iter(train_loader))
     latent_spaces = []
     all_labels = []
@@ -31,7 +32,7 @@ def get_latent_space_data(model, train_loader, DEVICE,N=1000):
     return latent_space, all_labels
 
 
-def plotLatentTransformed(latent_space,all_labels, A, pca1, name):
+def plotLatentTransformed(latent_space, all_labels, A, pca1, name):
     # Transform the latent space
     latent_space_transformed = np.dot(latent_space, A.T)
     # Plot latent space via PCA
@@ -40,7 +41,8 @@ def plotLatentTransformed(latent_space,all_labels, A, pca1, name):
     plot = plt.scatter(latent_space_pca[:, 0], latent_space_pca[:, 1], c=all_labels, cmap='tab10', label=all_labels)
     plt.title('Latent Space '+ name)
     plt.show(plot)
-    return  plot
+    return plot
+
 
 def avg_transformed_distances(z1, z2, A):
     # Compute the transformed distances
