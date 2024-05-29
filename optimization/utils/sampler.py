@@ -4,8 +4,8 @@ import torch
 
 def simple_sampler(m, model1, model2, data_loader, device):
     """
-    Input: 
-    - m: Samples 
+    Input:
+    - m: Samples
     - model1: Model 1
     - model2: Model 2
     Output:
@@ -15,33 +15,16 @@ def simple_sampler(m, model1, model2, data_loader, device):
     This function samples the latent space of the model and returns the latent vectors of the model 1 and model2
     """
     data_loader1, data_loader2 = data_loader.get_train_loader()
-    images, _ = next(iter(data_loader1))
-    images1, _ = next(iter(data_loader2))
-    all_images1 = []
 
-    all_images2 = []
+    # Sample indices from the train set
+    indices = torch.randperm(len(data_loader1.dataset))[:m]
 
-    for images, labels in data_loader1:
-        all_images1.append(images)
-
-    for images, labels in data_loader2:
-        all_images2.append(images)
-
-    # Concatenate all the batches to form a single tensor for images and labels
-    all_images1 = torch.cat(all_images1, dim=0)
-    all_images2 = torch.cat(all_images2, dim=0)
-    
-     # Sample indices from the train set
-    indices = np.random.choice(all_images1.shape[0], m, replace=False)
-
-    all_images_sample1 = all_images1[indices]
-    all_images_sample2 = all_images2[indices]
+    # Get the corresponding images
+    all_images_sample1 = torch.stack([data_loader1.dataset[i][0] for i in indices])
+    all_images_sample2 = torch.stack([data_loader2.dataset[i][0] for i in indices])
 
     z1 = model1.encode(all_images_sample1.to(device))
     z2 = model2.encode(all_images_sample2.to(device))
-
-    z1 = z1.detach().cpu().numpy()
-    z2 = z2.detach().cpu().numpy()  
 
     return z1, z2
 

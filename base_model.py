@@ -34,7 +34,7 @@ class LightningBaseModel(LightningModule, ABC):
         return self.decode(z)
 
     @abstractmethod
-    def get_latent_space(self, x: torch.utils.data.DataLoader) -> torch.Tensor:
+    def get_latent_space(self, x: torch.Tensor) -> torch.Tensor:
         """
         Returns the latent space representation of the input. Last Layer of the Encoder before the mean and variance.
         """
@@ -77,7 +77,13 @@ class BaseModel(nn.Module, ABC):
         return self.decode(z)
 
     @abstractmethod
-    def get_latent_space(self, x: torch.utils.data.DataLoader) -> torch.Tensor:
+    def get_latent_space(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Returns the latent space representation of the input. Last Layer of the Encoder before the mean and variance.
+        """
+        pass
+
+    def get_latent_space_from_dataloader(self, x: torch.utils.data.DataLoader) -> torch.Tensor:
         """
         Returns the latent space representation of the input. Last Layer of the Encoder before the mean and variance.
         """

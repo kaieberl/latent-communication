@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torchvision.transforms as transforms
 
-from helper.DataLoaderMNIST import DataLoaderMNIST
+from helper.dataloader_mnist import DataLoaderMNIST
 from optimizer import AffineFitting, LinearFitting
 from utils.sampler import simple_sampler
 from vit.train_vit import MNISTClassifier

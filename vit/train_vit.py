@@ -92,8 +92,11 @@ class MNISTClassifier(LightningBaseModel):
         """
         return self.model.heads(z)
 
+    def get_latent_space(self, x):
+        return self.encode(x)
+
     @torch.no_grad()
-    def get_latent_space(self, dataloader):
+    def get_latent_space_from_dataloader(self, dataloader):
         """
         Returns the latent space representation of the input.
         """

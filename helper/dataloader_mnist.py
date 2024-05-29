@@ -1,10 +1,11 @@
 import torchvision.datasets as datasets
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
-from torch.utils.data import Dataset, Subset
+from torch.utils.data import Subset
 import numpy as np
 
-class DataLoader_MNIST():
+
+class DataLoaderMNIST():
     def __init__(self, batch_size, transformation1, transformation2):
         self.batch_size = batch_size
         transform1 = transforms.Compose(transformation1)
