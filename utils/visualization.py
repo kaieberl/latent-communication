@@ -6,7 +6,7 @@ import torch
 from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
 
-sys.path.append("..")
+sys.path.append("")
 from vit.train_vit import MNISTDataModule, MNISTClassifier
 
 
@@ -140,7 +140,7 @@ def load_and_visualize_latent_space():
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    data_module = MNISTDataModule(data_dir=".", batch_size=128)
+    data_module = MNISTDataModule(data_dir="plotting_fun", batch_size=128)
 
     target_model = setup_model(1, device)
 
