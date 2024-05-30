@@ -1,32 +1,33 @@
 import numpy as np
 import torch
+from utils.dataloaders.DataLoaderMNIST_single import DataLoader_MNIST
 
 
-def simple_sampler(m, model1, model2, data_loader, device):
+def simple_sampler(indices, model,transformations,DEVICE,seed=10):
     """
     Input:
-    - m: Samples
-    - model1: Model 1
-    - model2: Model 2
+    - model: Model 
+    - indices: Indices of the dataset
+    - transformations: Transformations to be applied to the images
     Output:
-    - z1: Latent vectors of the model 1
-    - z2: Latent vectors of the model 2
+    - z: Latent vectors of the model 
 
-    This function samples the latent space of the model and returns the latent vectors of the model 1 and model2
+    This function samples the latent space of the model and returns the latent vectors of the modelsss
     """
-    data_loader1, data_loader2 = data_loader.get_train_loader()
+    data_loader = DataLoader_MNIST(128, transformations, seed=seed, indices=indices)
+    train_loader = data_loader.get_train_loader()
 
-    # Sample indices from the train set
-    indices = torch.randperm(len(data_loader1.dataset))[:m]
+    #get all images from train_loader and convert them to latent space
+    all_images = []
+    for images, _ in train_loader:
+        images = images.to(DEVICE)
+        latent_space = model.get_latent_space(images)
+        all_images.append(latent_space)
 
-    # Get the corresponding images
-    all_images_sample1 = torch.stack([data_loader1.dataset[i][0] for i in indices])
-    all_images_sample2 = torch.stack([data_loader2.dataset[i][0] for i in indices])
-
-    z1 = model1.get_latent_space(all_images_sample1.to(device))
-    z2 = model2.get_latent_space(all_images_sample2.to(device))
-
-    return z1, z2
+    z = torch.cat(all_images, dim=0)
+    #convert z to numpy
+    z = z.detach().cpu().numpy()
+    return z
 
 
 def class_sampler(m, model1, model2, data_loader, device):

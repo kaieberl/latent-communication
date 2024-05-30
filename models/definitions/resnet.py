@@ -3,7 +3,7 @@ import torchvision
 import torchvision.models as models
 import sys
 import os 
-from base_model import BaseModel	
+from models.definitions.base_model import BaseModel
 
 
 class ResNet(BaseModel):
