@@ -3,9 +3,6 @@ import torchvision
 import torchvision.models as models
 import sys
 import os 
-sys.path.append(os.path.join(os.getcwd(),'latent-communication'))#for google drive
-#os.chdir(os.path.join(os.getcwd(),'latent-communication'))
-#sys.path.append('../')
 from base_model import BaseModel	
 
 
