@@ -140,7 +140,9 @@ class NeuralNetworkFitting(BaseOptimizer):
 
         self.model = nn.Sequential(
             nn.Linear(self.latent_dim1, hidden_dim),
-            nn.Tanh(),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
             nn.Linear(hidden_dim, self.latent_dim2)
         )
 
