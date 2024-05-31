@@ -55,26 +55,28 @@ def get_latents(cfg, test=False):
     return latents, labels
 
 
-@hydra.main(config_path="../config", config_name="config_resnet")
+@hydra.main(config_path="../config", config_name="config_resnet_nn")
 def main(cfg : DictConfig) -> None:
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
     latents1, latents2 = get_latents(cfg)[0].values()
 
     if cfg.mapping == 'Linear':
         from optimizer import LinearFitting
-        mapping = LinearFitting(latents1, latents2, lamda=0.01)
+        mapping = LinearFitting(latents1, latents2, lamda=cfg.lamda)
     elif cfg.mapping == 'Affine':
         from optimizer import AffineFitting
-        mapping = AffineFitting(latents1, latents2, lamda=0.01)
+        mapping = AffineFitting(latents1, latents2, lamda=cfg.lamda)
+    elif cfg.mapping == 'NeuralNetwork':
+        from optimizer import NeuralNetworkFitting
+        mapping = NeuralNetworkFitting(latents1, latents2, hidden_dim=cfg.hidden_size, lamda=cfg.lamda, learning_rate=cfg.learning_rate, epochs=cfg.epochs)
     else:
         raise ValueError("Invalid experiment name")
-    mapping.solve_problem()
+    mapping.fit()
     storage_path = Path(cfg.storage_path) / f"{cfg.mapping}_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}_{cfg.num_samples}"
     mapping.save_results(storage_path)
 
     latents, labels = get_latents(cfg, test=True)
     latents1, latents2 = latents.values()
-    _, A = mapping.get_results()
     latents1_trafo = mapping.transform(latents1)
     visualize_results(cfg, labels, latents2, latents1_trafo)
 

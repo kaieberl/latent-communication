@@ -1,5 +1,8 @@
-experiment_name: ResNet-LinearTransform
-mapping: Linear
+experiment_name: ResNet-NN
+mapping: NeuralNetwork
+hidden_size: 256
+learning_rate: 0.01
+epochs: 10
 lamda: 0.1
 num_samples: 100
 base_dir: .

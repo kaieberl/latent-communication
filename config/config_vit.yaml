@@ -1,5 +1,6 @@
 experiment_name: ViT-LinearTransform
 mapping: Linear
+lamda: 0.01
 num_samples: 100
 base_dir: .
 storage_path: ${base_dir}/results/transformations/${.experiment_name}

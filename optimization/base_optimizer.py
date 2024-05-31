@@ -32,13 +32,13 @@ class BaseOptimizer:
         objective = cp.Minimize(loss)
         self.problem = cp.Problem(objective)
 
-    def solve_problem(self):
+    def fit(self):
         """
         Solves the optimization problem.
         """
-        print("Solving the problem")
         if self.problem is None:
             self.define_problem()
+        print("Solving the problem")
         self.problem.solve()
 
     @abstractmethod
