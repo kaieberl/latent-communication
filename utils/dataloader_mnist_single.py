@@ -5,7 +5,7 @@ from torch.utils.data import Subset
 import numpy as np
 
 
-class DataLoaderMNIST():
+class DataLoaderMNIST:
     def __init__(self, batch_size, transformation, seed=0, indices=None):
         self.indices = indices
         self.seed = seed
@@ -19,9 +19,7 @@ class DataLoaderMNIST():
         np.random.seed(self.seed)
 
         # Create Subsets with the same order of indices
-        if self.indices is not None:
-            pass
-        else:
+        if self.indices is None:
             self.indices = np.random.permutation(len(train))
         subset = Subset(train, self.indices)
 

@@ -1,12 +1,13 @@
+"""Load two pre-trained models and perform linear and affine fitting between their latent spaces, or between two sets
+of latent vectors."""
+
 import os
 
-import numpy as np
 import torch
-import torchvision.transforms as transforms
 
-from helper.dataloader_mnist import DataLoaderMNIST
+from stitching.stitching import get_transformations, load_model
 from optimizer import AffineFitting, LinearFitting
-from vit.train_vit import MNISTClassifier
+from utils.sampler import simple_sampler
 
 # Set device
 device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
@@ -15,71 +16,64 @@ device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 seed1 = 0
 seed2 = 1
-num_samples = 100
-storage_path = 'ViT-Linear'
 
 config = {
-    'path1': os.path.join(base_path, f"vit/models/vit_mnist_seed{seed1}_new.pth"),
-    'modelname1': 'vit',
-    'seed1': f'{seed1}',
-    'path2': os.path.join(base_path, f"vit/models/vit_mnist_seed{seed2}_new.pth"),
-    'modelname2': 'vit',
-    'seed2': f'{seed2}',
-    'num_samples': num_samples,
-    'storage_path': storage_path
+    'model1': {
+        # 'path': os.path.join(base_path, f"vit/models/vit_mnist_seed{seed1}.pth"),
+        'label_path': os.path.join(base_path, "vit/models/labels_train.pth"),
+        'latents_path': os.path.join(base_path, f"vit/models/latent_space_vit_seed{seed1}_train.pth"),
+        'name': 'vit',
+        'seed': seed1
+    },
+    'model2': {
+        # 'path': os.path.join(base_path, f"vit/models/vit_mnist_seed{seed2}.pth"),
+        'latents_path': os.path.join(base_path, f"vit/models/latent_space_vit_seed{seed2}_train.pth"),
+        'name': 'vit',
+        'seed': seed2
+    }
 }
 
-# Data transformations
-transform_pipeline = [
-    transforms.ToTensor(),
-    transforms.Resize((224, 224)),
-    transforms.Lambda(lambda x: x.repeat(3, 1, 1))
-]
 
-# DataLoader
-data_loader = DataLoaderMNIST(128, transform_pipeline, transform_pipeline)
+def get_latents(config):
+    """For both models, load the latent vectors if latent_path is provided, else load the models and sample the
+    latent vectors."""
 
+    torch.manual_seed(0)
+    indices = torch.randperm(60000)[:1000]
+    if 'latents_path' in config:
+        labels = torch.load(config['label_path'], map_location=device)
+        latents1 = torch.load(config['latents_path'], map_location=device)
+        latents2 = torch.load(config['latents_path'], map_location=device)
+        latents1 = latents1[indices]
+        latents2 = latents2[indices]
+    else:
+        model1 = load_model(config['modelname1'], config['path1'])
+        model2 = load_model(config['modelname2'], config['path2'])
 
-# Initialize models and load weights
-def load_model(path):
-    model = MNISTClassifier().to(device)
-    model.load_state_dict(torch.load(path, map_location=device))
-    return model
+        transforms1 = get_transformations(config['modelname1'])
+        transforms2 = get_transformations(config['modelname2'])
 
+        latents1 = simple_sampler(indices, model1, transforms1, device, seed=seed1)
+        latents2 = simple_sampler(indices, model2, transforms2, device, seed=seed2)
 
-# Sampling
-labels = torch.load(f"../vit/models/labels_train.pt", map_location=device)
-latents1 = torch.load(f"../vit/models/latent_space_vit_seed{seed1}_train.pt", map_location=device)
-latents2 = torch.load(f"../vit/models/latent_space_vit_seed{seed2}_train.pt", map_location=device)
-torch.manual_seed(0)
-indices = torch.randperm(latents1.size(0))[:num_samples]
-latents1 = latents1[indices]
-latents2 = latents2[indices]
+    return latents1, latents2
 
 
-# Linear transformation
-def perform_linear_fitting(z1, z2, lamda, config):
-    linear_fitting = LinearFitting(z1, z2, lamda)
+def main():
+    latents1, latents2 = get_latents(config)
+
+    # Linear transform
+    linear_fitting = LinearFitting(latents1, latents2, lamda=0.01)
     linear_fitting.solve_problem()
-    name = f"Linear_{config['modelname1']}_{config['seed1']}_{config['modelname2']}_{config['seed2']}_{config['num_samples']}"
-    path = os.path.join(config['storage_path'], name)
-    linear_fitting.save_results(path)
-    _, A = linear_fitting.get_results()
-    np.save(path, A)
+    linear_fitting.print_results()
+    linear_fitting.save_results("results/linear_fitting.npz")
 
-
-perform_linear_fitting(latents1, latents2, lamda=0.01, config=config)
-
-
-# Affine transformation
-def perform_affine_fitting(z1, z2, lamda, config):
-    affine_fitting = AffineFitting(z1, z2, lamda)
+    # Affine transform
+    affine_fitting = AffineFitting(latents1, latents2, lamda=0.01)
     affine_fitting.solve_problem()
-    name = f"Affine_{config['modelname1']}_{config['seed1']}_{config['modelname2']}_{config['seed2']}_{config['num_samples']}"
-    path = os.path.join(config['storage_path'], name)
-    affine_fitting.save_results(path)
-    _, A, b = affine_fitting.get_results()
-    np.savez(path, A=A, b=b)
+    affine_fitting.print_results()
+    affine_fitting.save_results("results/affine_fitting.npz")
 
 
-perform_affine_fitting(latents1, latents2, lamda=0.01, config=config)
+if __name__ == '__main__':
+    main()

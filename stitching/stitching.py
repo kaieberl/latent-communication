@@ -7,23 +7,6 @@ import torchvision.transforms as transforms
 
 from utils.dataloader_mnist_single import DataLoaderMNIST
 
-# Configuration
-seed1 = 1
-seed2 = 2
-root_folder = os.path.dirname(os.getcwd())  # folder for latent-communcation
-# 12, 13, 14, 23, 24 ,34
-config = {
-    'path1': root_folder+f"/models/checkpoints/ResNet/MNIST/model_seed{seed1}.pth",
-    'modelname1': 'resnet',
-    'seed1': f'{seed1}',
-    'path2': root_folder+f"/models/checkpoints/ResNet/MNIST/model_seed{seed2}.pth",
-    'modelname2': 'resnet',
-    'seed2': f'{seed2}',
-    'num_samples': '100',
-    'storage_path': 'ResNet-LinearTransform'
-
-}
-
 
 def load_model(model_name, model_path):
     device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
@@ -130,4 +113,19 @@ def main():
 
 
 if __name__ == '__main__':
+    # Configuration
+    seed1 = 1
+    seed2 = 2
+    root_folder = os.path.dirname(os.getcwd())  # folder for latent-communcation
+    # 12, 13, 14, 23, 24 ,34
+    config = {
+        'path1': root_folder + f"/models/checkpoints/ResNet/MNIST/model_seed{seed1}.pth",
+        'modelname1': 'resnet',
+        'seed1': f'{seed1}',
+        'path2': root_folder + f"/models/checkpoints/ResNet/MNIST/model_seed{seed2}.pth",
+        'modelname2': 'resnet',
+        'seed2': f'{seed2}',
+        'num_samples': '100',
+        'storage_path': 'ResNet-LinearTransform'
+    }
     main()

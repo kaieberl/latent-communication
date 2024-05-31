@@ -1,9 +1,9 @@
 import numpy as np
 import torch
-from utils.dataloaders.DataLoaderMNIST_single import DataLoader_MNIST
+from utils.dataloader_mnist_single import DataLoaderMNIST
 
 
-def simple_sampler(indices, model,transformations,DEVICE,seed=10):
+def simple_sampler(indices, model, transformations, device, seed=10):
     """
     Input:
     - model: Model 
@@ -12,20 +12,19 @@ def simple_sampler(indices, model,transformations,DEVICE,seed=10):
     Output:
     - z: Latent vectors of the model 
 
-    This function samples the latent space of the model and returns the latent vectors of the modelsss
+    This function samples the latent space of the model and returns the latent vectors
     """
-    data_loader = DataLoader_MNIST(128, transformations, seed=seed, indices=indices)
+    data_loader = DataLoaderMNIST(128, transformations, seed=seed, indices=indices)
     train_loader = data_loader.get_train_loader()
 
     #get all images from train_loader and convert them to latent space
     all_images = []
     for images, _ in train_loader:
-        images = images.to(DEVICE)
+        images = images.to(device)
         latent_space = model.get_latent_space(images)
         all_images.append(latent_space)
 
     z = torch.cat(all_images, dim=0)
-    #convert z to numpy
     z = z.detach().cpu().numpy()
     return z
 
