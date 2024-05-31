@@ -1,3 +1,5 @@
+import os
+
 import torchvision.datasets as datasets
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
@@ -13,8 +15,9 @@ class DataLoaderMNIST:
         transform = transforms.Compose(transformation)
 
         dataset_class = datasets.MNIST
-        train = dataset_class(root='../data', train=True, download=True, transform=transform)
-        test = dataset_class(root='../data', train=False, download=True, transform=transform)
+        base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+        train = dataset_class(root=base_dir + '/data', train=True, download=True, transform=transform)
+        test = dataset_class(root=base_dir + '/data', train=False, download=True, transform=transform)
 
         np.random.seed(self.seed)
 

@@ -1,8 +1,5 @@
 import torch.nn as nn
-import torchvision
 import torchvision.models as models
-import sys
-import os 
 from models.definitions.base_model import BaseModel
 
 

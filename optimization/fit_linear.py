@@ -2,6 +2,7 @@ from pathlib import Path
 import torch
 from omegaconf import DictConfig
 import hydra
+
 from stitching.stitching import get_transformations, load_model
 from optimizer import AffineFitting, LinearFitting
 from utils.sampler import simple_sampler
@@ -28,7 +29,7 @@ def get_latents(cfg):
     return latents
 
 
-@hydra.main(config_path="config", config_name="config_resnet")
+@hydra.main(config_path="../config", config_name="config_resnet")
 def main(cfg : DictConfig) -> None:
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
     latents1, latents2 = get_latents(cfg).values()
