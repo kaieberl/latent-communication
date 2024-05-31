@@ -1,12 +1,11 @@
 # Import relevant libraries
+import os
+
 import numpy as np
-import matplotlib.pyplot as plt
 import torch
 import torchvision.transforms as transforms
-import os
-import sys
-sys.path.append('../')
-from utils.dataloaders.DataLoaderMNIST_single import DataLoader_MNIST
+
+from utils.dataloader_mnist_single import DataLoaderMNIST
 
 # Configuration
 seed1 = 1
@@ -26,26 +25,27 @@ config = {
 }
 
 
-
 def load_model(model_name, model_path):
-    DEVICE = torch.device('cpu')
+    device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
     
-    if model_name == 'VAE':
+    if model_name == 'vae':
         from models.definitions.vae import VAE
-        model = VAE(in_dim=784, dims=[256, 128, 64, 32], distribution_dim=16).to(DEVICE)
+        model = VAE(in_dim=784, dims=[256, 128, 64, 32], distribution_dim=16).to(device)
     elif model_name == 'resnet':
         from models.definitions.resnet import ResNet
-        model = ResNet().to(DEVICE)
+        model = ResNet().to(device)
     else:
         raise ValueError(f"Unknown model name: {model_name}")
     
-    model.load_state_dict(torch.load(model_path, map_location=DEVICE))
+    model.load_state_dict(torch.load(model_path, map_location=device))
     return model
 
-def load_Models():
+
+def load_models():
     model1 = load_model(config['modelname1'], config['path1'])
     model2 = load_model(config['modelname2'], config['path2'])
     return model1, model2
+
 
 def get_transformations(model_name):
     if model_name == 'VAE':
@@ -62,10 +62,12 @@ def get_transformations(model_name):
     else:
         raise ValueError(f"Unknown model name: {model_name}")
 
+
 def transformations():
     transformations1 = get_transformations(config['modelname1'])
     transformations2 = get_transformations(config['modelname2'])
     return transformations1, transformations2
+
 
 def get_accuracy(model,test_loader):
     model.eval()
@@ -82,6 +84,7 @@ def get_accuracy(model,test_loader):
     accuracy = 100 * correct / total
     return accuracy
 
+
 def get_stitched_output(model1,model2,A,images):
     latent_space1 = model1.get_latent_space(images)
     latent_space_stitched = []
@@ -93,13 +96,13 @@ def get_stitched_output(model1,model2,A,images):
 
 
 # Load models
-model1, model2 = load_Models()
+model1, model2 = load_models()
 
 # Get transformations for the dataloader
 transformations1, transformations2 = transformations()
 
 # Initialize data loader
-data_loader_model = DataLoader_MNIST(128, get_transformations(config['modelname1']), seed=10)
+data_loader_model = DataLoaderMNIST(128, get_transformations(config['modelname1']), seed=10)
 test_loader = data_loader_model.get_test_loader()
 
 # Print accuracy for model 1 on test set
