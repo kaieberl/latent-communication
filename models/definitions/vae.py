@@ -21,6 +21,8 @@ class VAE(BaseModel):
         if dims is None:
             dims = [128, 256, 512]
 
+        self.hidden_dim = dims[-1]
+
         for h_dim in dims:
             # Create Layers 
             modules.append(

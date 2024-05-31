@@ -3,11 +3,14 @@ seed2: 1
 num_samples: 100
 base_dir: .
 storage_path: ${base_dir}/results/transformations/ViT-LinearTransform
+label_path: ${base_dir}/data/MNIST/labels.npy
 model1:
   seed: 0
-  path: ${base_dir}/models/checkpoints/ViT/mnist_seed${.seed}.pth
-  name: resnet
+  train_latents_path: ${base_dir}/models/latents/ViT/latent_space_vit_mnist_train_seed${.seed}.pth
+  test_latents_path: ${base_dir}/models/latents/ViT/latent_space_vit_mnist_test_seed${.seed}.pth
+  name: vit
 model2:
   seed: 1
-  path: ${base_dir}/models/checkpoints/ViT/mnist_seed${.seed}.pth
-  name: resnet
+  train_latents_path: ${base_dir}/models/latents/ViT/latent_space_vit_mnist_train_seed${.seed}.pth
+  test_latents_path: ${base_dir}/models/latents/ViT/latent_space_vit_mnist_test_seed${.seed}.pth
+  name: vit

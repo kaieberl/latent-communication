@@ -42,6 +42,7 @@ class ViT(LightningBaseModel):
         super().__init__()
         self.model = models.vit_b_16(weights=None, num_classes=10)
         # self.model = models.vit_b_16(weights="imagenet21k+imagenet2012", pretrained=True, num_classes=10)
+        self.hidden_dim = self.model.hidden_dim
 
     def forward(self, x):
         return self.model(x)

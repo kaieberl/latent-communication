@@ -6,9 +6,6 @@ import torch
 from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
 
-sys.path.append("")
-from vit.train_vit import MNISTDataModule, MNISTClassifier
-
 
 def highlight_cluster(ax, df, target, alpha, cmap, norm, size=5):
     cluster_df = df[df["target"] == target]
@@ -97,7 +94,7 @@ def visualize_mapping_error(latent1, errors, fig_path=None):
 
     # Plot the positions of latent1 with colors encoding the error
     plt.figure(figsize=(8, 6))
-    scatter = plt.scatter(latent_df['x'], latent_df['y'], c=latent_df['error'], cmap='YlOrRd', s=10, vmin=4, vmax=16)
+    scatter = plt.scatter(latent_df['x'], latent_df['y'], c=latent_df['error'], cmap='YlOrRd', s=10)
     plt.colorbar(scatter, label='Mapping Error (Euclidean Distance)')
     plt.title('Latent Space with Mapping Error')
     plt.xlabel('Latent Dimension 1')
@@ -108,49 +105,26 @@ def visualize_mapping_error(latent1, errors, fig_path=None):
     plt.show()
 
 
-def setup_model(seed, device):
-    model = MNISTClassifier().to(device)
-    model.load_state_dict(torch.load(f"models/vit_mnist_seed{seed}_new.pth"))
-    model.eval()
-    return model
+def visualize_results(cfg, labels, latents1, latents2):
+    """
+    Creates two scatter plots of the input latent spaces and a scatter plot of the error between the two latent spaces.
 
+    Args:
+        cfg (DictConfig): Configuration dictionary
+        labels (torch.Tensor): Labels
+        latents1 (torch.Tensor): Target latent vectors
+        latents2 (torch.Tensor): Transformed source latent vectors
 
-def save_latent_space(model, dataloader, prefix, seed):
-    latents, labels = model.get_latent_space_from_dataloader(dataloader)
-    torch.save(labels, f"models/labels_{prefix}.pt")
-    torch.save(latents, f"models/latent_space_vit_seed{seed}_{prefix}.pt")
+    Returns:
+        None
+    """
+    errors = np.linalg.norm(latents1 - latents2, axis=1)
 
-
-def load_and_visualize_latent_space():
-    labels = torch.load(f"models/labels_test.pt", map_location='cpu')
-    latents1 = torch.load(f"models/latent_space_vit_seed1_test.pt", map_location='cpu')
-    latents2 = torch.load(f"models/latent_space_vit_seed0_test_translated.pt", map_location='cpu')
-    print(f"Mean error for linear mapping: {np.mean(np.linalg.norm(latents1.detach().numpy() - latents2.detach().numpy(), axis=1)):.4f}")
-    pca, latents1_2d = visualize_latent_space_pca(latents1, labels, "figures/latent_space_pca_vit_seed1_test.png")
-    errors = np.linalg.norm(latents1.detach().numpy() - latents2.detach().numpy(), axis=1)
-    _, latents2 = visualize_latent_space_pca(latents2, labels, "figures/latent_space_pca_vit_seed0_test_linear.png", pca=pca)
-    visualize_mapping_error(latents1_2d, errors, "figures/mapping_error_vit_seed0_seed1_test_linear.png")
-
-    latents2 = torch.load(f"models/latent_space_vit_seed0_test_affine.pt", map_location='cpu')
-    print(f"Mean error for affine mapping: {np.mean(np.linalg.norm(latents1.detach().numpy() - latents2.detach().numpy(), axis=1)):.4f}")
-    errors = np.linalg.norm(latents1.detach().numpy() - latents2.detach().numpy(), axis=1)
-    _, latents2 = visualize_latent_space_pca(latents2, labels, "figures/latent_space_pca_vit_seed0_test_affine.png", pca=pca)
-    visualize_mapping_error(latents1_2d, errors, "figures/mapping_error_vit_seed0_seed1_test_affine.png")
-
-
-def main():
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    data_module = MNISTDataModule(data_dir="plotting_fun", batch_size=128)
-
-    target_model = setup_model(1, device)
-
-    # For validation set
-    save_latent_space(target_model, data_module.val_dataloader(), "test", seed=1)
-    load_and_visualize_latent_space()
-
-    # For training set
-    save_latent_space(target_model, data_module.train_dataloader(), "train", seed=1)
-
-
-if __name__ == "__main__":
-    main()
+    pca, latents1_2d = visualize_latent_space_pca(latents1, labels,
+                                                  f"{cfg.storage_path}/latent_space_pca_{cfg.model1.name}_{cfg.model1.seed}.png")
+    visualize_latent_space_pca(latents2, labels,
+                               f"{cfg.storage_path}/latent_space_pca_{cfg.model2.name}_{cfg.model2.seed}_linear.png",
+                               pca=pca)
+    visualize_mapping_error(latents1_2d, errors,
+                            f"{cfg.storage_path}/mapping_error_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}_linear.png")
+    print(f"MSE: {np.mean(errors):.4f}")

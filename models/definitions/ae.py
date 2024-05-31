@@ -1,13 +1,12 @@
 import torch.nn.init as init
 import torch.nn as nn
-import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
 
+from models.definitions.base_model import LightningBaseModel
 
 
-
-class LightningAutoencoder(pl.LightningModule):
+class LightningAutoencoder(LightningBaseModel):
     def __init__(self):
         super().__init__()
         self.autoencoder = nn.Module()
@@ -58,6 +57,7 @@ class LightningAutoencoder(pl.LightningModule):
             nn.Linear(500, 1024),
             nn.GELU(),
         )
+        self.hidden_dim = 500
 
     def forward(self, x):
         for layer in self.autoencoder.encoder:
@@ -87,7 +87,7 @@ class LightningAutoencoder(pl.LightningModule):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
         return optimizer
     
-    def getLatenSpace(self, x):
+    def get_latent_space(self, x):
         for layer in self.autoencoder.encoder:
             x = layer(x)
         x = x.view(x.size(0), -1)

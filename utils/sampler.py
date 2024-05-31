@@ -10,7 +10,8 @@ def simple_sampler(indices, model, transformations, device, seed=10):
     - indices: Indices of the dataset
     - transformations: Transformations to be applied to the images
     Output:
-    - z: Latent vectors of the model 
+    - z: Latent vectors of the model
+    - labels: Labels of the dataset
 
     This function samples the latent space of the model and returns the latent vectors
     """
@@ -26,7 +27,7 @@ def simple_sampler(indices, model, transformations, device, seed=10):
 
     z = torch.cat(all_images, dim=0)
     z = z.detach().cpu().numpy()
-    return z
+    return z, data_loader.train_loader.dataset.dataset.targets[indices]
 
 
 def class_sampler(m, model1, model2, data_loader, device):

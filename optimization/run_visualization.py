@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from vit.visualization import visualize_mapping_error, visualize_latent_space_pca
+from utils.visualization import visualize_mapping_error, visualize_latent_space_pca
 
 labels = torch.load(f"models/labels_test.pt", map_location='cpu')
 latents1 = torch.load(f"models/latent_space_vit_seed1_test.pt", map_location='cpu').detach().numpy()

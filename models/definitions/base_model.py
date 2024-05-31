@@ -5,6 +5,8 @@ from abc import ABC, abstractmethod
 import torch.nn as nn
 from abc import abstractmethod
 
+from tqdm import tqdm
+
 
 class LightningBaseModel(LightningModule, ABC):
 
@@ -53,6 +55,7 @@ class BaseModel(nn.Module, ABC):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     @abstractmethod
     def decode(self, z: torch.Tensor) -> torch.Tensor:
@@ -83,8 +86,21 @@ class BaseModel(nn.Module, ABC):
         """
         pass
 
-    def get_latent_space_from_dataloader(self, x: torch.utils.data.DataLoader) -> torch.Tensor:
+    @torch.no_grad()
+    def get_latent_space_from_dataloader(self, dataloader):
         """
-        Returns the latent space representation of the input. Last Layer of the Encoder before the mean and variance.
+        Returns the latent space representation of the input.
         """
-        pass
+        total_samples = len(dataloader.dataset)
+        latent_dim = self.hidden_dim
+        latents = torch.zeros((total_samples, latent_dim), device=self.device)
+        labels = torch.zeros(total_samples, dtype=torch.long, device=self.device)
+        dataloader = torch.utils.data.DataLoader(dataloader.dataset, batch_size=dataloader.batch_size, shuffle=False)
+        start_idx = 0
+        for images, targets in tqdm(dataloader):
+            images = images.to(self.device)
+            targets = targets.to(self.device)
+            latents[start_idx:start_idx + dataloader.batch_size] = self.encode(images)
+            labels[start_idx:start_idx + dataloader.batch_size] = targets
+            start_idx += dataloader.batch_size
+        return latents, labels
