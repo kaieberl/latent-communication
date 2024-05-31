@@ -1,0 +1,13 @@
+seed1: 0
+seed2: 1
+num_samples: 100
+base_dir: .
+storage_path: ${base_dir}/results/transformations/ViT-LinearTransform
+model1:
+  seed: 0
+  path: ${base_dir}/models/checkpoints/ViT/mnist_seed${.seed}.pth
+  name: resnet
+model2:
+  seed: 1
+  path: ${base_dir}/models/checkpoints/ViT/mnist_seed${.seed}.pth
+  name: resnet

@@ -1,0 +1,11 @@
+num_samples: 100
+base_dir: .
+storage_path: ${base_dir}/results/transformations/ResNet-LinearTransform
+model1:
+  seed: 1
+  path: ${base_dir}/models/checkpoints/ResNet/MNIST/model_seed${.seed}.pth
+  name: resnet
+model2:
+  seed: 2
+  path: ${base_dir}/models/checkpoints/ResNet/MNIST/model_seed${.seed}.pth
+  name: resnet
