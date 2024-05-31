@@ -37,7 +37,7 @@ class MNISTDataModule(L.LightningDataModule):
                                            batch_size=self.batch_size, shuffle=False)
 
 
-class MNISTClassifier(LightningBaseModel):
+class ViT(LightningBaseModel):
     def __init__(self):
         super().__init__()
         self.model = models.vit_b_16(weights=None, num_classes=10)
@@ -123,7 +123,7 @@ if __name__ == '__main__':
         L.seed_everything(seed)
 
         data_module = MNISTDataModule()
-        model = MNISTClassifier()
+        model = ViT()
         trainer = Trainer(max_epochs=7)
         trainer.fit(model, datamodule=data_module)
 

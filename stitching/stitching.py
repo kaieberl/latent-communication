@@ -10,7 +10,7 @@ from utils.dataloader_mnist_single import DataLoaderMNIST
 # Configuration
 seed1 = 1
 seed2 = 2
-root_folder = os.path.dirname(os.getcwd()) # folder for latent-communcation
+root_folder = os.path.dirname(os.getcwd())  # folder for latent-communcation
 # 12, 13, 14, 23, 24 ,34
 config = {
     'path1': root_folder+f"/models/checkpoints/ResNet/MNIST/model_seed{seed1}.pth",
@@ -95,39 +95,39 @@ def get_stitched_output(model1,model2,A,images):
     return outputs
 
 
-# Load models
-model1, model2 = load_models()
+def main():
+    model1, model2 = load_models()
 
-# Get transformations for the dataloader
-transformations1, transformations2 = transformations()
+    # Initialize data loader
+    data_loader_model = DataLoaderMNIST(128, get_transformations(config['modelname1']), seed=10)
+    test_loader = data_loader_model.get_test_loader()
 
-# Initialize data loader
-data_loader_model = DataLoaderMNIST(128, get_transformations(config['modelname1']), seed=10)
-test_loader = data_loader_model.get_test_loader()
+    # Print accuracy for model 1 on test set
+    accuracy1 = get_accuracy(model1, test_loader)
+    accuracy2 = get_accuracy(model2, test_loader)
+    print(f'Accuracy of {config["modelname1"]} {seed1} on the test images: %.2f %%' % accuracy1)
+    print(f'Accuracy of {config["modelname1"]} {seed2} on the test images: %.2f %%' % accuracy2)
 
-# Print accuracy for model 1 on test set
-accuracy1 = get_accuracy(model1, test_loader)
-accuracy2 = get_accuracy(model2, test_loader)
-print(f'Accuracy of {config["modelname1"]} {seed1} on the test images: %.2f %%' % accuracy1)
-print(f'Accuracy of {config["modelname1"]} {seed2} on the test images: %.2f %%' % accuracy2)
+    #Get the transformation
+    name = 'Linear_' + config['modelname1'] + '_' + config['seed1'] + '_' + config['modelname2'] + '_' + config['seed2'] + '_' + config['num_samples'] + '.npy'
+    path = root_folder + '/results/transformations/' + config['storage_path'] + '/' + name
+    A = np.load(path)
+    A = torch.tensor(A).float()
+
+    #Print accuracy of stitched model
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for data in test_loader:
+            images, labels = data
+            outputs = get_stitched_output(model1,model2,A,images)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+    accuracy_stitched = 100 * correct / total
+    print('Accuracy of stitched model on the test images: %.2f %%' % accuracy_stitched)
 
 
-#Get the transformation
-name = 'Linear_' + config['modelname1'] + '_' + config['seed1'] + '_' + config['modelname2'] + '_' + config['seed2'] + '_' + config['num_samples'] + '.npy'
-path = root_folder + '/results/transformations/' + config['storage_path'] + '/' + name 
-A = np.load(path)
-A = torch.tensor(A).float()
-
-#Print accuracy of stitched model
-correct = 0
-total = 0
-with torch.no_grad():
-    for data in test_loader:
-        images, labels = data
-        outputs = get_stitched_output(model1,model2,A,images)
-        _, predicted = torch.max(outputs.data, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
-
-accuracy_stitched = 100 * correct / total
-print('Accuracy of stitched model on the test images: %.2f %%' % accuracy_stitched)
+if __name__ == '__main__':
+    main()

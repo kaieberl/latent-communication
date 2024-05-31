@@ -1,3 +1,5 @@
+"""Trains a linear mapping between two latent spaces, using gradient descent."""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
