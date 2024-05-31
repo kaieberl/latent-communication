@@ -8,7 +8,7 @@ from torchvision.datasets import MNIST
 from torchvision.transforms import transforms
 
 from stitching.stitching import get_transformations, load_model
-from optimizer import AffineFitting, LinearFitting
+from optimizer import LinearFitting as Fitting
 from utils.sampler import simple_sampler
 from utils.visualization import visualize_results
 
@@ -61,27 +61,15 @@ def main(cfg : DictConfig) -> None:
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
     latents1, latents2 = get_latents(cfg)[0].values()
 
-    # Linear transform
-    linear_fitting = LinearFitting(latents1, latents2, lamda=0.01)
-    linear_fitting.solve_problem()
+    mapping = Fitting(latents1, latents2, lamda=0.01)
+    mapping.solve_problem()
     storage_path = Path(cfg.storage_path) / f"Linear_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}_{cfg.num_samples}"
-    linear_fitting.save_results(storage_path)
+    mapping.save_results(storage_path)
 
     latents, labels = get_latents(cfg, test=True)
     latents1, latents2 = latents.values()
-    _, A = linear_fitting.get_results()
-    latents1_trafo = latents1 @ A.T
-    visualize_results(cfg, labels, latents2, latents1_trafo)
-    del linear_fitting
-
-    # Affine transform
-    affine_fitting = AffineFitting(latents1, latents2, lamda=0.01)
-    affine_fitting.solve_problem()
-    storage_path = Path(cfg.storage_path) / f"Affine_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}_{cfg.num_samples}"
-    affine_fitting.save_results(storage_path)
-
-    _, A, b = affine_fitting.get_results()
-    latents1_trafo = latents1 @ A.T + b
+    _, A = mapping.get_results()
+    latents1_trafo = mapping.transform(latents1)
     visualize_results(cfg, labels, latents2, latents1_trafo)
 
 

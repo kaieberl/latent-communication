@@ -1,9 +1,9 @@
 import numpy as np
 import cvxpy as cp
-from base_optimizer import Base_Optimizer
+from base_optimizer import BaseOptimizer
 
 
-class AffineFitting(Base_Optimizer):
+class AffineFitting(BaseOptimizer):
     def __init__(self, z1, z2, lamda):
         """
         Initializes the AffineFitting class.
@@ -56,8 +56,11 @@ class AffineFitting(Base_Optimizer):
         np.savez(path, A=A, b=b)
         return print("Results saved at ", path)
 
+    def transform(self, z1):
+        return z1 @ self.A_aff.value.T + self.b_aff.value
 
-class LinearFitting(Base_Optimizer):
+
+class LinearFitting(BaseOptimizer):
     def __init__(self, z1, z2, lamda):
         """
         Initializes the MatrixFitting class.
@@ -105,4 +108,6 @@ class LinearFitting(Base_Optimizer):
         A = self.A.value
         np.save(path, A)
         return print("Results saved at ", path)
-    
+
+    def transform(self, z1):
+        return z1 @ self.A.value.T

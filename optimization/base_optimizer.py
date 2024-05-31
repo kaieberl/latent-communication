@@ -1,9 +1,8 @@
-# Import relevant libraries
-import numpy as np
 import cvxpy as cp
 from abc import abstractmethod
 
-class Base_Optimizer():
+
+class BaseOptimizer:
     def __init__(self, z1, z2):
         """
         Initializes the TransformOptimizer class.
@@ -68,8 +67,14 @@ class Base_Optimizer():
         pass
 
     @abstractmethod
-    def save_results(self, path):
+    def transform(self, z1):
         """
-        Saves the results of the optimization problem.
+        Transforms the input data using the learned transformation.
+
+        Parameters:
+        z1 (np.ndarray): Input data matrix of shape (n_samples, latent_dim1)
+
+        Returns:
+        np.ndarray: Transformed data matrix of shape (n_samples, latent_dim2)
         """
         pass
