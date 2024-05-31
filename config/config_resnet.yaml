@@ -1,6 +1,8 @@
+experiment_name: ResNet-LinearTransform
+mapping: Linear
 num_samples: 100
 base_dir: .
-storage_path: ${base_dir}/results/transformations/ResNet-LinearTransform
+storage_path: ${base_dir}/results/transformations/${.experiment_name}
 model1:
   seed: 1
   path: ${base_dir}/models/checkpoints/ResNet/MNIST/model_seed${.seed}.pth

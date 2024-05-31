@@ -1,9 +1,9 @@
-seed1: 0
-seed2: 1
+experiment_name: ViT-LinearTransform
+mapping: Linear
 num_samples: 100
 base_dir: .
-storage_path: ${base_dir}/results/transformations/ViT-LinearTransform
-label_path: ${base_dir}/data/MNIST/labels.npy
+storage_path: ${base_dir}/results/transformations/${.experiment_name}
+label_path: ${base_dir}/data/MNIST/labels.pth
 model1:
   seed: 0
   train_latents_path: ${base_dir}/models/latents/ViT/latent_space_vit_mnist_train_seed${.seed}.pth

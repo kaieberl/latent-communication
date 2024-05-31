@@ -8,7 +8,6 @@ from torchvision.datasets import MNIST
 from torchvision.transforms import transforms
 
 from stitching.stitching import get_transformations, load_model
-from optimizer import LinearFitting as Fitting
 from utils.sampler import simple_sampler
 from utils.visualization import visualize_results
 
@@ -61,9 +60,16 @@ def main(cfg : DictConfig) -> None:
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
     latents1, latents2 = get_latents(cfg)[0].values()
 
-    mapping = Fitting(latents1, latents2, lamda=0.01)
+    if cfg.mapping == 'Linear':
+        from optimizer import LinearFitting
+        mapping = LinearFitting(latents1, latents2, lamda=0.01)
+    elif cfg.mapping == 'Affine':
+        from optimizer import AffineFitting
+        mapping = AffineFitting(latents1, latents2, lamda=0.01)
+    else:
+        raise ValueError("Invalid experiment name")
     mapping.solve_problem()
-    storage_path = Path(cfg.storage_path) / f"Linear_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}_{cfg.num_samples}"
+    storage_path = Path(cfg.storage_path) / f"{cfg.mapping}_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}_{cfg.num_samples}"
     mapping.save_results(storage_path)
 
     latents, labels = get_latents(cfg, test=True)
