@@ -1,5 +1,10 @@
+from typing import Union
+
 import cvxpy as cp
 from abc import abstractmethod
+
+import numpy as np
+import torch
 
 
 class BaseOptimizer:
@@ -67,15 +72,15 @@ class BaseOptimizer:
         pass
 
     @abstractmethod
-    def transform(self, z1):
+    def transform(self, z1: Union[np.ndarray, torch.Tensor]) -> torch.Tensor:
         """
         Transforms the input data using the learned transformation.
 
         Parameters:
-        z1 (np.ndarray): Input data matrix of shape (n_samples, latent_dim1)
+            z1 (np.ndarray or torch.Tensor): Input data matrix of shape (n_samples, latent_dim1)
 
         Returns:
-        np.ndarray: Transformed data matrix of shape (n_samples, latent_dim2)
+            torch.Tensor: Transformed latent vectors of shape (n_samples, latent_dim2)
         """
         pass
 

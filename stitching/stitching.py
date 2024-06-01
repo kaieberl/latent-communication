@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import torch
 import torchvision.transforms as transforms
 from omegaconf import DictConfig
@@ -79,13 +80,16 @@ def get_accuracy(model,test_loader):
 
 def get_stitched_output(model1, model2, mapping, images):
     latent_space1 = model1.get_latent_space(images)
-    latent_space_stitched = mapping.transform(latent_space1).to(torch.float32)
+    latent_space1 = torch.tensor(latent_space1, dtype=torch.float32)
+    latent_space_stitched = mapping.transform(latent_space1)
+    if isinstance(latent_space_stitched, np.ndarray):
+        latent_space_stitched = torch.tensor(latent_space_stitched, dtype=torch.float32)
     outputs = model2.decode(latent_space_stitched)
     return outputs
 
 
 def load_mapping(cfg):
-    name = f'{cfg.mapping}_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}_{cfg.num_samples}.npy'
+    name = f'{cfg.mapping}_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}_{cfg.num_samples}'
     path = Path(cfg.base_dir) / 'results/transformations' / cfg.storage_path / name
     if cfg.mapping == 'Linear':
         from optimization.optimizer import LinearFitting
@@ -101,7 +105,7 @@ def load_mapping(cfg):
     return mapping
 
 
-@hydra.main(config_path="../config", config_name="config_vit_resnet")
+@hydra.main(config_path="../config", config_name="config_vit_resnet_nn")
 def main(cfg: DictConfig) -> None:
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
     model1, model2 = load_models(cfg)

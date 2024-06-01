@@ -67,7 +67,9 @@ class AffineFitting(BaseOptimizer):
         return print("Results saved at ", path)
 
     def transform(self, z1):
-        return z1 @ self.A_aff.value.T + self.b_aff.value
+        if isinstance(z1, np.ndarray):
+            z1 = torch.tensor(z1, dtype=torch.float32)
+        return torch.tensor(z1 @ self.A_aff.value.T + self.b_aff.value, dtype=torch.float32)
 
     @classmethod
     def from_file(cls, path):
@@ -80,7 +82,7 @@ class AffineFitting(BaseOptimizer):
         Returns:
             AffineFitting: Instance of the AffineFitting class with the loaded results
         """
-        data = np.load(path)
+        data = np.load(str(path) + '.npz')
         A = data['A']
         b = data['b']
         latent_dim2, latent_dim1 = A.shape
@@ -141,7 +143,9 @@ class LinearFitting(BaseOptimizer):
         return print("Results saved at ", path)
 
     def transform(self, z1):
-        return z1 @ self.A.value.T
+        if isinstance(z1, np.ndarray):
+            z1 = torch.tensor(z1, dtype=torch.float32)
+        return torch.tensor(z1 @ self.A.value.T, dtype=torch.float32)
 
     @classmethod
     def from_file(cls, path):
@@ -154,7 +158,7 @@ class LinearFitting(BaseOptimizer):
         Returns:
             LinearFitting: Instance of the LinearFitting class with the loaded results
         """
-        A = np.load(path)
+        A = np.load(str(path) + '.npy')
         latent_dim2, latent_dim1 = A.shape
         instance = cls(np.zeros((1, latent_dim1)), np.zeros((1, latent_dim2)), 0)
         instance.A = cp.Parameter((latent_dim2, latent_dim1), value=A)
@@ -225,13 +229,30 @@ class NeuralNetworkFitting(BaseOptimizer):
         Applies the trained model to new data.
 
         Parameters:
-            z1 (np.ndarray): New input data matrix of shape (n_samples, latent_dim1)
+            z1 (np.ndarray or torch.Tensor): New input data matrix of shape (n_samples, latent_dim1)
 
         Returns:
-            np.ndarray: Transformed data matrix of shape (n_samples, latent_dim2)
+            torch.Tensor: Transformed data matrix of shape (n_samples, latent_dim2)
         """
         self.model.eval()
-        z1 = torch.tensor(z1, dtype=torch.float32)
+        if isinstance(z1, np.ndarray):
+            z1 = torch.tensor(z1, dtype=torch.float32)
         with torch.no_grad():
             z1 = self.model(z1).numpy()
         return z1
+
+    @classmethod
+    def from_file(cls, path):
+        """
+        Loads the results of the optimization problem from a file.
+
+        Parameters:
+            path (str): Path to the file containing the results
+
+        Returns:
+            NeuralNetworkFitting: Instance of the NeuralNetworkFitting class with the loaded results
+        """
+        model = torch.load(str(path) + '.pth')
+        instance = cls(np.empty((1, 1)), np.empty((1, 1)), 0, 0)
+        instance.model = model
+        return instance
