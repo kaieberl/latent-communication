@@ -17,6 +17,9 @@ def load_model(model_name, model_path):
     elif model_name == 'resnet':
         from models.definitions.resnet import ResNet
         model = ResNet().to(device)
+    elif model_name == 'vit':
+        from models.definitions.vit import ViT
+        model = ViT().to(device)
     else:
         raise ValueError(f"Unknown model name: {model_name}")
     
@@ -31,7 +34,7 @@ def load_models(cfg):
 
 
 def get_transformations(model_name):
-    if model_name == 'VAE':
+    if model_name == 'vae':
         return [
             transforms.ToTensor(),
             transforms.Normalize((0.5,), (0.5,)),
@@ -40,6 +43,12 @@ def get_transformations(model_name):
     elif model_name == 'resnet':
         return [
             transforms.ToTensor(),
+            transforms.Lambda(lambda x: x.repeat(3, 1, 1))
+        ]
+    elif model_name == 'vit':
+        return [
+            transforms.ToTensor(),
+            transforms.Resize((224, 224)),
             transforms.Lambda(lambda x: x.repeat(3, 1, 1))
         ]
     else:
@@ -92,7 +101,7 @@ def load_mapping(cfg):
     return mapping
 
 
-@hydra.main(config_path="../config", config_name="config_resnet")
+@hydra.main(config_path="../config", config_name="config_vit_resnet")
 def main(cfg: DictConfig) -> None:
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
     model1, model2 = load_models(cfg)

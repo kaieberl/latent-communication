@@ -123,8 +123,8 @@ def visualize_results(cfg, labels, latents1, latents2):
     pca, latents1_2d = visualize_latent_space_pca(latents1, labels,
                                                   f"{cfg.storage_path}/latent_space_pca_{cfg.model1.name}_{cfg.model1.seed}.png")
     visualize_latent_space_pca(latents2, labels,
-                               f"{cfg.storage_path}/latent_space_pca_{cfg.model2.name}_{cfg.model2.seed}_linear.png",
+                               f"{cfg.storage_path}/latent_space_pca_{cfg.model2.name}_{cfg.model2.seed}_transformed.png",
                                pca=pca)
     visualize_mapping_error(latents1_2d, errors,
-                            f"{cfg.storage_path}/mapping_error_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}_linear.png")
+                            f"{cfg.storage_path}/mapping_error_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}.png")
     print(f"MSE: {np.mean(errors):.4f}")

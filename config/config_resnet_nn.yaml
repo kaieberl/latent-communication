@@ -2,7 +2,7 @@ experiment_name: ResNet-NN
 mapping: NeuralNetwork
 hidden_size: 512  # same as the latent size
 learning_rate: 0.001
-epochs: 50
+epochs: 100
 lamda: 0.01
 num_samples: 100
 base_dir: .

@@ -62,6 +62,7 @@ class AffineFitting(BaseOptimizer):
         # As numpy arrays
         A = self.A_aff.value
         b = self.b_aff.value
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
         np.savez(path, A=A, b=b)
         return print("Results saved at ", path)
 
@@ -135,6 +136,7 @@ class LinearFitting(BaseOptimizer):
 
     def save_results(self, path):
         A = self.A.value
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
         np.save(path, A)
         return print("Results saved at ", path)
 

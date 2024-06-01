@@ -32,7 +32,7 @@ def get_latents(cfg, test=False):
         indices = torch.randperm(60000)[:cfg.num_samples]
         for model_name in ['model1', 'model2']:
             if 'train_latents_path' in cfg[model_name]:
-                labels = torch.load(cfg[model_name].train_label_path, map_location=device)
+                labels = torch.load(cfg.train_label_path, map_location=device)
                 z = torch.load(cfg[model_name].train_latents_path, map_location=device)
                 latents[model_name] = z[indices]
             else:
@@ -70,7 +70,7 @@ def create_mapping(cfg, latents1, latents2):
     return mapping
 
 
-@hydra.main(config_path="../config", config_name="config_resnet_nn")
+@hydra.main(config_path="../config", config_name="config_vit_resnet")
 def main(cfg : DictConfig) -> None:
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
     latents1, latents2 = get_latents(cfg)[0].values()

@@ -1,4 +1,4 @@
-experiment_name: ViT-LinearTransform
+experiment_name: ViT-ResNet-LinearTransform
 mapping: Linear
 lamda: 0.01
 num_samples: 100
@@ -8,11 +8,12 @@ test_label_path: ${base_dir}/data/MNIST/labels_test.pth
 train_label_path: ${base_dir}/data/MNIST/labels_train.pth
 model1:
   seed: 0
+  path: ${base_dir}/models/checkpoints/ViT/vit_mnist_seed${.seed}.pth
   train_latents_path: ${base_dir}/models/latents/ViT/latent_space_vit_mnist_train_seed${.seed}.pth
   test_latents_path: ${base_dir}/models/latents/ViT/latent_space_vit_mnist_test_seed${.seed}.pth
   name: vit
 model2:
   seed: 1
-  train_latents_path: ${base_dir}/models/latents/ViT/latent_space_vit_mnist_train_seed${.seed}.pth
-  test_latents_path: ${base_dir}/models/latents/ViT/latent_space_vit_mnist_test_seed${.seed}.pth
-  name: vit
+  path: ${base_dir}/models/checkpoints/ResNet/MNIST/model_seed${.seed}.pth
+  test_latents_path: ${base_dir}/models/latents/ResNet/latent_space_resnet_mnist_test_seed${.seed}.pth
+  name: resnet

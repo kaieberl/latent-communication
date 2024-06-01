@@ -9,7 +9,7 @@ from torchvision.datasets import MNIST
 from torchvision.transforms import transforms
 from tqdm import tqdm
 
-from base_model import LightningBaseModel
+from models.definitions.base_model import LightningBaseModel
 
 
 class MNISTDataModule(L.LightningDataModule):
