@@ -59,6 +59,20 @@ class LightningAutoencoder(LightningBaseModel):
         )
         self.hidden_dim = 500
 
+    def encode(self, x):
+        for layer in self.autoencoder.encoder:
+            x = layer(x)
+        x = x.view(x.size(0), -1)
+        x = self.autoencoder.encoder_out(x)
+        return x
+
+    def decode(self, x):
+        x = self.autoencoder.decoder_in(x)
+        x = x.view(x.size(0), 256, 2, 2)
+        for layer in self.autoencoder.decoder:
+            x = layer(x)
+        return x
+
     def forward(self, x):
         for layer in self.autoencoder.encoder:
             x = layer(x)
