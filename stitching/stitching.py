@@ -95,7 +95,7 @@ def main(cfg: DictConfig) -> None:
     print(f'Accuracy of {cfg.model2.name} {cfg.model2.seed} on the test images: %.2f %%' % accuracy2)
 
     # Get the transformation
-    name = f'Linear_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}_{cfg.num_samples}.npy'
+    name = f'{cfg.mapping}_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}_{cfg.num_samples}.npy'
     path = Path(cfg.base_dir) / 'results/transformations' / cfg.storage_path / name
     A = np.load(path)
     A = torch.tensor(A).float()

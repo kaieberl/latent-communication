@@ -4,14 +4,16 @@ lamda: 0.01
 num_samples: 100
 base_dir: .
 storage_path: ${base_dir}/results/transformations/${.experiment_name}
-label_path: ${base_dir}/data/MNIST/labels.pth
+test_label_path: ${base_dir}/data/MNIST/labels_test.pth
 model1:
   seed: 0
   train_latents_path: ${base_dir}/models/latents/ViT/latent_space_vit_mnist_train_seed${.seed}.pth
   test_latents_path: ${base_dir}/models/latents/ViT/latent_space_vit_mnist_test_seed${.seed}.pth
+  train_label_path: ${base_dir}/data/MNIST/labels_train.pth
   name: vit
 model2:
   seed: 1
   train_latents_path: ${base_dir}/models/latents/ViT/latent_space_vit_mnist_train_seed${.seed}.pth
   test_latents_path: ${base_dir}/models/latents/ViT/latent_space_vit_mnist_test_seed${.seed}.pth
+  train_label_path: ${base_dir}/data/MNIST/labels_train.pth
   name: vit

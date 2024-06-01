@@ -3,9 +3,11 @@ from pathlib import Path
 import numpy as np
 import cvxpy as cp
 import torch
-from torch import nn, optim
+from lightning import Trainer
+from torch.utils.data import DataLoader, TensorDataset
 
 from base_optimizer import BaseOptimizer
+from optimization.mlp import MLP
 
 
 class AffineFitting(BaseOptimizer):
@@ -70,7 +72,7 @@ class AffineFitting(BaseOptimizer):
 class LinearFitting(BaseOptimizer):
     def __init__(self, z1, z2, lamda):
         """
-        Initializes the MatrixFitting class.
+        Initializes the LinearFitting class.
 
         Parameters:
             z1 (np.ndarray): Input data matrix of shape (n_samples, 32)
@@ -123,7 +125,7 @@ class LinearFitting(BaseOptimizer):
 class NeuralNetworkFitting(BaseOptimizer):
     def __init__(self, z1, z2, hidden_dim, lamda, learning_rate=0.01, epochs=100):
         """
-        Initializes the NeuralNetworkFitting class.
+        Defines a neural network mapping between two latent spaces. Uses the MLP model.
 
         Parameters:
             z1 (np.ndarray): Input data matrix of shape (n_samples, latent_dim1)
@@ -134,20 +136,9 @@ class NeuralNetworkFitting(BaseOptimizer):
             epochs (int): Number of epochs to train the network
         """
         super().__init__(z1, z2)
-        self.lamda = lamda
-        self.learning_rate = learning_rate
         self.epochs = epochs
+        self.model = MLP(self.latent_dim1, hidden_dim, self.latent_dim2, learning_rate, lamda)
 
-        self.model = nn.Sequential(
-            nn.Linear(self.latent_dim1, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, self.latent_dim2)
-        )
-
-        self.criterion = nn.MSELoss()
-        self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate, weight_decay=self.lamda)
         self.z1 = torch.tensor(z1, dtype=torch.float32)
         self.z2 = torch.tensor(z2, dtype=torch.float32)
 
@@ -155,48 +146,23 @@ class NeuralNetworkFitting(BaseOptimizer):
         """
         Defines the loss function for the neural network fitting problem.
         """
-        def loss_fn():
-            predictions = self.model(self.z1)
-            loss = self.criterion(predictions, self.z2)
-            return loss
-        return loss_fn
+        pass
 
     def fit(self):
         """
-        Fits the neural network to the data.
+        Trains the neural network model.
         """
-        self.model.train()
-        loss_fn = self.define_loss()
-        for epoch in range(self.epochs):
-            self.optimizer.zero_grad()
-            loss = loss_fn()
-            loss.backward()
-            self.optimizer.step()
-            if (epoch + 1) % 10 == 0:
-                print(f"Epoch {epoch + 1}/{self.epochs}, Loss: {loss.item()}")
+        trainer = Trainer(max_epochs=self.epochs)
+        trainer.fit(self.model, DataLoader(TensorDataset(self.z1, self.z2), batch_size=self.z1.size(0), shuffle=True))
 
     def get_results(self):
         """
         Returns the results of the optimization problem.
 
         Returns:
-            float: Final loss value
-            nn.Module: Trained model
+            torch.nn.Module: Trained model
         """
-        self.model.eval()
-        with torch.no_grad():
-            final_loss = self.define_loss()()
-        return final_loss.item(), self.model
-
-    def print_results(self):
-        """
-        Prints the results of the optimization problem.
-        """
-        final_loss, model = self.get_results()
-        print("Final loss: ", final_loss)
-        print("Model parameters: ")
-        for param in model.parameters():
-            print(param)
+        return self.model
 
     def save_results(self, path):
         """
@@ -206,8 +172,14 @@ class NeuralNetworkFitting(BaseOptimizer):
             path (str): Path to save the model parameters
         """
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        torch.save(self.model.state_dict(), str(path) + '.pth')
+        torch.save(self.model, str(path) + '.pth')
         print("Model saved at ", path)
+
+    def print_results(self):
+        """
+        Prints the results of the optimization problem.
+        """
+        print("Model: ", self.model)
 
     def transform(self, z1):
         """

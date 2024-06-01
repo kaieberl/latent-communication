@@ -31,7 +31,7 @@ def get_latents(cfg, test=False):
         torch.manual_seed(0)
         indices = torch.randperm(60000)[:cfg.num_samples]
         for model_name in ['model1', 'model2']:
-            if 'latents_path' in cfg[model_name]:
+            if 'train_latents_path' in cfg[model_name]:
                 labels = torch.load(cfg[model_name].train_label_path, map_location=device)
                 z = torch.load(cfg[model_name].train_latents_path, map_location=device)
                 latents[model_name] = z[indices]
@@ -41,8 +41,8 @@ def get_latents(cfg, test=False):
                 latents[model_name], labels = simple_sampler(indices, model, transformations, device, seed=cfg[model_name].seed)
     else:
         for model_name in ['model1', 'model2']:
-            if 'latents_path' in cfg[model_name]:
-                labels = torch.load(cfg[model_name].test_label_path, map_location=device)
+            if 'test_latents_path' in cfg[model_name]:
+                labels = torch.load(cfg.test_label_path, map_location=device)
                 z = torch.load(cfg[model_name].test_latents_path, map_location=device)
                 latents[model_name] = z
             else:
