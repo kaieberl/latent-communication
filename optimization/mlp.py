@@ -14,8 +14,10 @@ class MLP(LightningModule):
         self.model = nn.Sequential(
             nn.Linear(source_dim, hidden_dim),
             nn.ReLU(),
+            # nn.Dropout(0.2),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
+            # nn.Dropout(0.2),
             nn.Linear(hidden_dim, target_dim)
         )
 

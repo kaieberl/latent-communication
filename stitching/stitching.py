@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import numpy as np
 import torch
 import torchvision.transforms as transforms
 from omegaconf import DictConfig
@@ -69,14 +68,28 @@ def get_accuracy(model,test_loader):
     return accuracy
 
 
-def get_stitched_output(model1, model2, A, images):
+def get_stitched_output(model1, model2, mapping, images):
     latent_space1 = model1.get_latent_space(images)
-    latent_space_stitched = []
-    for i in range(latent_space1.shape[0]):
-        latent_space_stitched.append(A @ latent_space1[i, :])
-    latent_space_stitched = torch.stack(latent_space_stitched)
+    latent_space_stitched = mapping.transform(latent_space1).to(torch.float32)
     outputs = model2.decode(latent_space_stitched)
     return outputs
+
+
+def load_mapping(cfg):
+    name = f'{cfg.mapping}_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}_{cfg.num_samples}.npy'
+    path = Path(cfg.base_dir) / 'results/transformations' / cfg.storage_path / name
+    if cfg.mapping == 'Linear':
+        from optimization.optimizer import LinearFitting
+        mapping = LinearFitting.from_file(path)
+    elif cfg.mapping == 'Affine':
+        from optimization.optimizer import AffineFitting
+        mapping = AffineFitting.from_file(path)
+    elif cfg.mapping == 'NeuralNetwork':
+        from optimization.optimizer import NeuralNetworkFitting
+        mapping = NeuralNetworkFitting.from_file(path)
+    else:
+        raise ValueError("Invalid experiment name")
+    return mapping
 
 
 @hydra.main(config_path="../config", config_name="config_resnet")
@@ -94,11 +107,7 @@ def main(cfg: DictConfig) -> None:
     print(f'Accuracy of {cfg.model1.name} {cfg.model1.seed} on the test images: %.2f %%' % accuracy1)
     print(f'Accuracy of {cfg.model2.name} {cfg.model2.seed} on the test images: %.2f %%' % accuracy2)
 
-    # Get the transformation
-    name = f'{cfg.mapping}_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}_{cfg.num_samples}.npy'
-    path = Path(cfg.base_dir) / 'results/transformations' / cfg.storage_path / name
-    A = np.load(path)
-    A = torch.tensor(A).float()
+    mapping = load_mapping(cfg)
 
     # Print accuracy of stitched model
     correct = 0
@@ -106,7 +115,7 @@ def main(cfg: DictConfig) -> None:
     with torch.no_grad():
         for data in test_loader:
             images, labels = data
-            outputs = get_stitched_output(model1, model2, A, images)
+            outputs = get_stitched_output(model1, model2, mapping, images)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()

@@ -78,3 +78,17 @@ class BaseOptimizer:
         np.ndarray: Transformed data matrix of shape (n_samples, latent_dim2)
         """
         pass
+
+    @classmethod
+    @abstractmethod
+    def from_file(cls, path):
+        """
+        Loads the results of the optimization problem from a file.
+
+        Parameters:
+        path (str): Path to the file containing the results
+
+        Returns:
+        BaseOptimizer: Instance of the BaseOptimizer class with the loaded results
+        """
+        pass

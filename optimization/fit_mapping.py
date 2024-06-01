@@ -55,22 +55,27 @@ def get_latents(cfg, test=False):
     return latents, labels
 
 
+def create_mapping(cfg, latents1, latents2):
+    if cfg.mapping == 'Linear':
+        from optimization.optimizer import LinearFitting
+        mapping = LinearFitting(latents1, latents2, lamda=cfg.lamda)
+    elif cfg.mapping == 'Affine':
+        from optimization.optimizer import AffineFitting
+        mapping = AffineFitting(latents1, latents2, lamda=cfg.lamda)
+    elif cfg.mapping == 'NeuralNetwork':
+        from optimization.optimizer import NeuralNetworkFitting
+        mapping = NeuralNetworkFitting(latents1, latents2, hidden_dim=cfg.hidden_size, lamda=cfg.lamda, learning_rate=cfg.learning_rate, epochs=cfg.epochs)
+    else:
+        raise ValueError("Invalid experiment name")
+    return mapping
+
+
 @hydra.main(config_path="../config", config_name="config_resnet_nn")
 def main(cfg : DictConfig) -> None:
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
     latents1, latents2 = get_latents(cfg)[0].values()
 
-    if cfg.mapping == 'Linear':
-        from optimizer import LinearFitting
-        mapping = LinearFitting(latents1, latents2, lamda=cfg.lamda)
-    elif cfg.mapping == 'Affine':
-        from optimizer import AffineFitting
-        mapping = AffineFitting(latents1, latents2, lamda=cfg.lamda)
-    elif cfg.mapping == 'NeuralNetwork':
-        from optimizer import NeuralNetworkFitting
-        mapping = NeuralNetworkFitting(latents1, latents2, hidden_dim=cfg.hidden_size, lamda=cfg.lamda, learning_rate=cfg.learning_rate, epochs=cfg.epochs)
-    else:
-        raise ValueError("Invalid experiment name")
+    mapping = create_mapping(cfg, latents1, latents2)
     mapping.fit()
     storage_path = Path(cfg.storage_path) / f"{cfg.mapping}_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}_{cfg.num_samples}"
     mapping.save_results(storage_path)

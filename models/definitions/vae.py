@@ -1,3 +1,4 @@
+from typing import List
 
 import torch.nn as nn
 import torch
@@ -7,9 +8,10 @@ import os
 #os.chdir('/Users/mariotuci/Desktop/Google-Drive/Master/SoSe-24/Project Studies/Project/Code/latent-communication')
 from models.definitions.base_model import BaseModel
 
+
 class VAE(BaseModel):
 
-    def __init__(self,in_dim: int,  dims: int, distribution_dim: int):
+    def __init__(self,in_dim: int,  dims: List[int], distribution_dim: int):
         super(VAE, self).__init__()
 
         self.in_dim = in_dim

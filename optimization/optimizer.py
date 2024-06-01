@@ -6,7 +6,7 @@ import torch
 from lightning import Trainer
 from torch.utils.data import DataLoader, TensorDataset
 
-from base_optimizer import BaseOptimizer
+from optimization.base_optimizer import BaseOptimizer
 from optimization.mlp import MLP
 
 
@@ -68,6 +68,26 @@ class AffineFitting(BaseOptimizer):
     def transform(self, z1):
         return z1 @ self.A_aff.value.T + self.b_aff.value
 
+    @classmethod
+    def from_file(cls, path):
+        """
+        Loads the results of the optimization problem from a file.
+
+        Parameters:
+            path (str): Path to the file containing the results
+
+        Returns:
+            AffineFitting: Instance of the AffineFitting class with the loaded results
+        """
+        data = np.load(path)
+        A = data['A']
+        b = data['b']
+        latent_dim2, latent_dim1 = A.shape
+        instance = cls(np.zeros((1, latent_dim1)), np.zeros((1, latent_dim2)), 0)
+        instance.A_aff = cp.Parameter((latent_dim2, latent_dim1), value=A)
+        instance.b_aff = cp.Parameter(latent_dim2, value=b)
+        return instance
+
 
 class LinearFitting(BaseOptimizer):
     def __init__(self, z1, z2, lamda):
@@ -120,6 +140,23 @@ class LinearFitting(BaseOptimizer):
 
     def transform(self, z1):
         return z1 @ self.A.value.T
+
+    @classmethod
+    def from_file(cls, path):
+        """
+        Loads the results of the optimization problem from a file.
+
+        Parameters:
+            path (str): Path to the file containing the results
+
+        Returns:
+            LinearFitting: Instance of the LinearFitting class with the loaded results
+        """
+        A = np.load(path)
+        latent_dim2, latent_dim1 = A.shape
+        instance = cls(np.zeros((1, latent_dim1)), np.zeros((1, latent_dim2)), 0)
+        instance.A = cp.Parameter((latent_dim2, latent_dim1), value=A)
+        return instance
 
 
 class NeuralNetworkFitting(BaseOptimizer):
