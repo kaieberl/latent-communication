@@ -1,9 +1,10 @@
+import torch
+from models.definitions.base_model import LightningBaseModel
+
 import torch.nn.init as init
 import torch.nn as nn
-import torch
 import torch.nn.functional as F
 
-from models.definitions.base_model import LightningBaseModel
 
 
 class LightningAutoencoder(LightningBaseModel):
@@ -90,11 +91,18 @@ class LightningAutoencoder(LightningBaseModel):
             m.bias.data.fill_(0.01)
     
 
-    def training_step(self, batch, batch_idx):
-        x, _ = batch
+    def training_step(self, batch):
+        x = batch
         x_hat = self.forward(x)
         loss = F.mse_loss(x_hat, x)
         self.log('train_loss', loss)
+        return loss
+
+    def validation_step(self, batch):
+        x = batch
+        x_hat = self.forward(x)
+        loss = F.mse_loss(x_hat, x)
+        self.log('val_loss', loss)
         return loss
 
     def configure_optimizers(self):
