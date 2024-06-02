@@ -3,10 +3,12 @@ from typing import List
 import torch.nn as nn
 import torch
 # get working directory
-import os
+# import os
 # Change directory
 #os.chdir('/Users/mariotuci/Desktop/Google-Drive/Master/SoSe-24/Project Studies/Project/Code/latent-communication')
 from models.definitions.base_model import BaseModel
+
+device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
 
 
 class VAE(BaseModel):
@@ -67,10 +69,8 @@ class VAE(BaseModel):
 
     def encode(self, x):
         """"
-
         Encodes the input by passing through the encoder network
         and returns the mean and log variance of the encoded input.
-
         """
         result = self.encoder(x)
         result = torch.flatten(result, start_dim=1)
@@ -82,9 +82,7 @@ class VAE(BaseModel):
 
     def decode(self, z):
         """
-
         Takes the latent code as input and returns the reconstructed image.
-
         """
         result = self.decoder_input(z)
         result = self.decoder(result)
@@ -93,10 +91,8 @@ class VAE(BaseModel):
 
     def reparameterize(self, mu, logvar):
         """
-
         Reparameterization trick to sample from N(mu, var) from
         N(0,1).
-
         """
         std = torch.exp(0.5*logvar)
         eps = torch.randn_like(std)
@@ -125,19 +121,16 @@ class VAE(BaseModel):
     def sample(self, num_samples):
         """
         Samples from the latent space and returns the decoded output.
-
         """
         with torch.no_grad():
             z = torch.randn(num_samples, self.distribution_dim)
-            z = z.to(DEVICE)
+            z = z.to(device)
             z = self.decode(z)
         return z
-    
 
     def get_latent_space(self, x):
         """
         Returns the latent space representation of the input. Last Layer of the Encoder before the mean and variance.
-        
         """
         result = self.encoder(x)
         result = torch.flatten(result, start_dim=1)

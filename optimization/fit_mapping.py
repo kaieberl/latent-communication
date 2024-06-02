@@ -70,7 +70,7 @@ def create_mapping(cfg, latents1, latents2):
     return mapping
 
 
-@hydra.main(config_path="../config", config_name="config_vit_resnet_nn")
+@hydra.main(config_path="../config")
 def main(cfg : DictConfig) -> None:
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
     latents1, latents2 = get_latents(cfg)[0].values()

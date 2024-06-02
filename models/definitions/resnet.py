@@ -1,12 +1,14 @@
 import torch.nn as nn
 import torchvision.models as models
+from torchvision.models import ResNet18_Weights
+
 from models.definitions.base_model import BaseModel
 
 
 class ResNet(BaseModel):
     def __init__(self, pretrained = True):
         super(ResNet, self).__init__()
-        model = models.resnet18(pretrained=pretrained)
+        model = models.resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
         self.hidden_dim = 512
         self.conv1 = model.conv1
         self.bn1 = model.bn1

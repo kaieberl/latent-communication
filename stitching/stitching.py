@@ -105,12 +105,13 @@ def load_mapping(cfg):
     return mapping
 
 
-@hydra.main(config_path="../config", config_name="config_vit_resnet_nn")
+@hydra.main(config_path="../config")
 def main(cfg: DictConfig) -> None:
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
     model1, model2 = load_models(cfg)
 
     # Initialize data loader
+    # TODO: this uses the wrong data loader for model 2 if it has different transformations, e.g. vit and resnet
     data_loader_model = DataLoaderMNIST(128, get_transformations(cfg.model1.name), seed=10)
     test_loader = data_loader_model.get_test_loader()
 

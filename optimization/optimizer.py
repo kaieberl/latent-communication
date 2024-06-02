@@ -145,7 +145,7 @@ class LinearFitting(BaseOptimizer):
     def transform(self, z1):
         if isinstance(z1, np.ndarray):
             z1 = torch.tensor(z1, dtype=torch.float32)
-        return torch.tensor(z1 @ self.A.value.T, dtype=torch.float32)
+        return z1 @ self.A.value.T
 
     @classmethod
     def from_file(cls, path):
