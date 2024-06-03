@@ -2,3 +2,5 @@
 /.zeroshot
 /data/*
 .DS_Store
+/outputs/.hydra/*
+/outputs/stiching.log

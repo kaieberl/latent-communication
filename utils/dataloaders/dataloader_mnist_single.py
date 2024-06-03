@@ -15,7 +15,7 @@ class DataLoaderMNIST:
         transform = transforms.Compose(transformation)
 
         dataset_class = datasets.MNIST
-        base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
         train = dataset_class(root=base_dir + '/data', train=True, download=True, transform=transform)
         test = dataset_class(root=base_dir + '/data', train=False, download=True, transform=transform)
 

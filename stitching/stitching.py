@@ -7,11 +7,10 @@ from omegaconf import DictConfig
 import hydra
 
 from utils.dataloaders.dataloader_mnist_single import DataLoaderMNIST
-
+device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
 
 def load_model(model_name, model_path):
-    device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
-    
+
     if model_name == 'vae':
         from models.definitions.vae import VAE
         model = VAE(in_dim=784, dims=[256, 128, 64, 32], distribution_dim=16).to(device)
@@ -25,7 +24,7 @@ def load_model(model_name, model_path):
         raise ValueError(f"Unknown model name: {model_name}")
     
     model.load_state_dict(torch.load(model_path, map_location=device))
-    return model
+    return model.to(device)
 
 
 def load_models(cfg):
@@ -69,6 +68,8 @@ def get_accuracy(model,test_loader):
     with torch.no_grad():
         for data in test_loader:
             images, labels = data
+            images = images.to(device)
+            labels = labels.to(device)
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
@@ -79,12 +80,14 @@ def get_accuracy(model,test_loader):
 
 
 def get_stitched_output(model1, model2, mapping, images):
-    latent_space1 = model1.get_latent_space(images)
-    latent_space1 = torch.tensor(latent_space1, dtype=torch.float32)
-    latent_space_stitched = mapping.transform(latent_space1)
+    latent_space1 = model1.get_latent_space(images).to(dtype=torch.float32)
+    latent_space_stitched = mapping.transform(latent_space1.detach().cpu())
+    #Convert to tensor if necessary and to the right dtype
     if isinstance(latent_space_stitched, np.ndarray):
         latent_space_stitched = torch.tensor(latent_space_stitched, dtype=torch.float32)
-    outputs = model2.decode(latent_space_stitched)
+    elif isinstance(latent_space_stitched, torch.Tensor):
+        latent_space_stitched = latent_space_stitched.to(dtype=torch.float32)
+    outputs = model2.decode(latent_space_stitched.to(device))
     return outputs
 
 
@@ -108,6 +111,7 @@ def load_mapping(cfg):
 @hydra.main(version_base="1.1", config_path="../config")
 def main(cfg: DictConfig) -> None:
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
+    print("Using device ", device)
     model1, model2 = load_models(cfg)
 
     # Initialize data loader
@@ -129,6 +133,7 @@ def main(cfg: DictConfig) -> None:
     with torch.no_grad():
         for data in test_loader:
             images, labels = data
+            images,labels = images.to(device),labels.to(device)
             outputs = get_stitched_output(model1, model2, mapping, images)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
