@@ -11,7 +11,7 @@ from utils.model import load_models, get_accuracy, get_transformations
 
 device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
 
-def get_stitched_output(model1, model2, mapping, images):
+def get_stitched_output(model1, model2, mapping, images, model2_name= None):
     latent_space1 = model1.get_latent_space(images).to(dtype=torch.float32)
     latent_space_stitched = mapping.transform(latent_space1.detach().cpu())
     #Convert to tensor if necessary and to the right dtype
@@ -19,8 +19,15 @@ def get_stitched_output(model1, model2, mapping, images):
         latent_space_stitched = torch.tensor(latent_space_stitched, dtype=torch.float32)
     elif isinstance(latent_space_stitched, torch.Tensor):
         latent_space_stitched = latent_space_stitched.to(dtype=torch.float32)
+    if model2_name ==  'vae':
+        #map latent space stitched to mu and var
+        mu = model2.mu(latent_space_stitched)
+        var = model2.var(latent_space_stitched)
+        latent_space_stitched = model2.reparameterize(mu, var)   
     outputs = model2.decode(latent_space_stitched.to(device))
     return outputs
+
+
 
 
 def load_mapping(cfg):

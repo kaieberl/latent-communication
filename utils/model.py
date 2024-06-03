@@ -87,3 +87,18 @@ def get_accuracy(model,test_loader):
     # Calculate accuracy
     accuracy = 100 * correct / total
     return accuracy
+
+def get_reconstruction_error(model, test_loader):
+    """
+    Calculate the reconstruction error of the model on the given test set.
+    """
+    model.eval()
+    total_loss = 0
+    with torch.no_grad():
+        for data in test_loader:
+            images, _ = data
+            images = images.to(device)
+            outputs = model(images)
+            loss = model.loss_function(images, outputs[0], outputs[1], outputs[2])
+            total_loss += loss.item()
+    return total_loss / len(test_loader.dataset)
