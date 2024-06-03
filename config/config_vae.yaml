@@ -1,0 +1,14 @@
+experiment_name: VAE-LinearTransform
+mapping: Linear
+lamda: 0.01
+num_samples: 100
+base_dir: .
+storage_path: ${base_dir}/results/transformations/${.experiment_name}
+model1:
+  seed: 1
+  path: ${base_dir}/models/checkpoints/VAE/MNIST/MNIST_VAE_${.seed}_10.pth
+  name: vae
+model2:
+  seed: 2
+  path: ${base_dir}/models/checkpoints/VAE/MNIST/MNIST_VAE_${.seed}_10.pth
+  name: vae
