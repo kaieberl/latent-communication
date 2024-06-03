@@ -7,7 +7,7 @@ from torch.utils.data import Subset
 import numpy as np
 
 
-class DataLoaderFNIST:
+class DataLoaderFMNIST:
     def __init__(self, batch_size, transformation, seed=0, indices=None):
         self.indices = indices
         self.seed = seed
