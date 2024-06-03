@@ -39,7 +39,7 @@ def compute_latents(cfg, train=False):
     return latents, labels
 
 
-@hydra.main(config_path='../config')
+@hydra.main(version_base="1.1", config_path='../config')
 def main(cfg: DictConfig) -> None:
     cfg.base_dir = hydra.utils.get_original_cwd()
     latents, labels = compute_latents(cfg)

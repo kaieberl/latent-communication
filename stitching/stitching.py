@@ -6,7 +6,7 @@ import torchvision.transforms as transforms
 from omegaconf import DictConfig
 import hydra
 
-from utils.dataloader_mnist_single import DataLoaderMNIST
+from utils.dataloaders.dataloader_mnist_single import DataLoaderMNIST
 
 
 def load_model(model_name, model_path):
@@ -105,7 +105,7 @@ def load_mapping(cfg):
     return mapping
 
 
-@hydra.main(config_path="../config")
+@hydra.main(version_base="1.1", config_path="../config")
 def main(cfg: DictConfig) -> None:
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
     model1, model2 = load_models(cfg)
