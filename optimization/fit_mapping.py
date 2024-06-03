@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import MNIST
 from torchvision.transforms import transforms
 
-from stitching.stitching import get_transformations, load_model
+from utils.model import load_model, get_transformations
 from utils.sampler import simple_sampler
 from utils.visualization import visualize_results
 
