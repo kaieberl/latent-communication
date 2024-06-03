@@ -7,77 +7,9 @@ from omegaconf import DictConfig
 import hydra
 
 from utils.dataloaders.dataloader_mnist_single import DataLoaderMNIST
+from utils.model import load_models, get_accuracy, get_transformations
+
 device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
-
-def load_model(model_name, model_path):
-
-    if model_name == 'vae':
-        from models.definitions.vae import VAE
-        model = VAE(in_dim=784, dims=[256, 128, 64, 32], distribution_dim=16).to(device)
-    elif model_name == 'resnet':
-        from models.definitions.resnet import ResNet
-        model = ResNet().to(device)
-    elif model_name == 'vit':
-        from models.definitions.vit import ViT
-        model = ViT().to(device)
-    else:
-        raise ValueError(f"Unknown model name: {model_name}")
-    
-    model.load_state_dict(torch.load(model_path, map_location=device))
-    return model.to(device)
-
-
-def load_models(cfg):
-    model1 = load_model(cfg.model1.name, cfg.model1.path)
-    model2 = load_model(cfg.model2.name, cfg.model2.path)
-    return model1, model2
-
-
-def get_transformations(model_name):
-    if model_name == 'vae':
-        return [
-            transforms.ToTensor(),
-            transforms.Normalize((0.5,), (0.5,)),
-            transforms.Lambda(lambda x: x.view(-1))
-        ]
-    elif model_name == 'resnet':
-        return [
-            transforms.ToTensor(),
-            transforms.Lambda(lambda x: x.repeat(3, 1, 1))
-        ]
-    elif model_name == 'vit':
-        return [
-            transforms.ToTensor(),
-            transforms.Resize((224, 224)),
-            transforms.Lambda(lambda x: x.repeat(3, 1, 1))
-        ]
-    else:
-        raise ValueError(f"Unknown model name: {model_name}")
-
-
-def transformations(cfg):
-    transformations1 = get_transformations(cfg.model1.name)
-    transformations2 = get_transformations(cfg.model2.name)
-    return transformations1, transformations2
-
-
-def get_accuracy(model,test_loader):
-    model.eval()
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for data in test_loader:
-            images, labels = data
-            images = images.to(device)
-            labels = labels.to(device)
-            outputs = model(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-    # Calculate accuracy
-    accuracy = 100 * correct / total
-    return accuracy
-
 
 def get_stitched_output(model1, model2, mapping, images):
     latent_space1 = model1.get_latent_space(images).to(dtype=torch.float32)
