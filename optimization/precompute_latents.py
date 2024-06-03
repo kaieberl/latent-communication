@@ -14,7 +14,8 @@ from torchvision.transforms import transforms
 
 from utils.model import get_transformations, load_model
 
-device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('mps') if torch.backends.mps.is_available() else 'cpu'
+
 
 
 def compute_latents(cfg, train=False):

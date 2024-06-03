@@ -35,7 +35,7 @@ class LinearMapping(LightningModule):
 
 
 if __name__ == "__main__":
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('mps') if torch.backends.mps.is_available() else 'cpu'
 
     # load the data
     source_data_train = torch.load("../vit/models/latent_space_vit_seed0_train.pt")
