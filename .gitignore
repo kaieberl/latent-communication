@@ -3,3 +3,4 @@
 /data/*
 .DS_Store
 **/.hydra/
+/Latent_Communication.egg-info

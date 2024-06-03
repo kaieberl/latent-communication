@@ -1,0 +1,16 @@
+experiment_name: AE-ResNet-LinearTransform
+mapping: Linear
+lamda: 0.01
+num_samples: 100
+base_dir: /Users/federicoferoggio/Documents/vs_code/latent-communication
+storage_path: ${base_dir}/results/transformations/${.experiment_name}
+test_label_path: ${base_dir}/data/MNIST/labels_test.pth
+train_label_path: ${base_dir}/data/MNIST/labels_train.pth
+model1:
+  seed: 1
+  path: /Users/federicoferoggio/Documents/vs_code/latent-communication/models/checkpoints/AE/MNIST/MNIST_AE_1_5.pth
+  name: ae
+model2:
+  seed: 1
+  path: /Users/federicoferoggio/Documents/vs_code/latent-communication/models/checkpoints/ResNet/MNIST/model_seed${.seed}.pth
+  name: resnet
