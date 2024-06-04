@@ -82,7 +82,7 @@ class VAE(BaseModel):
 
     def decode(self, z):
         """
-        Takes the latent code as input and returns the reconstructed image.
+        Ta
         """
         result = self.decoder_input(z)
         result = self.decoder(result)
