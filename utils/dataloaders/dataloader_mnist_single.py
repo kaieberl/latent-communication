@@ -16,9 +16,8 @@ class DataLoaderMNIST:
         transform = transforms.Compose(transformation)
 
         dataset_class = datasets.MNIST
-        base_dir = Path(os.path.realpath(__file__)).parent.parent.parent
-        train = dataset_class(root=base_dir / 'data', train=True, download=True, transform=transform)
-        test = dataset_class(root=base_dir / 'data', train=False, download=True, transform=transform)
+        train = dataset_class(root=base_path + '/data', train=True, download=True, transform=transform)
+        test = dataset_class(root=base_path + '/data', train=False, download=True, transform=transform)
 
         np.random.seed(self.seed)
 
