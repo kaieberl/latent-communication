@@ -14,7 +14,6 @@ from utils.visualization import visualize_results
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('mps') if torch.backends.mps.is_available() else 'cpu'
 
 
-
 def get_latents(cfg, test=False):
     """For both models, load the latent vectors if latent_path is provided, else load the models and sample the
         latent vectors.

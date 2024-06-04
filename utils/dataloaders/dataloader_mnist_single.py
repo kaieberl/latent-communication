@@ -9,15 +9,15 @@ import numpy as np
 
 
 class DataLoaderMNIST:
-    def __init__(self, batch_size, transformation, seed=0, indices=None, base_path=os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))):
+    def __init__(self, batch_size, transformation, seed=0, indices=None, base_path=Path(os.path.realpath(__file__)).parent.parent.parent):
         self.indices = indices
         self.seed = seed
         self.batch_size = batch_size
         transform = transforms.Compose(transformation)
 
         dataset_class = datasets.MNIST
-        train = dataset_class(root=base_path + '/data', train=True, download=True, transform=transform)
-        test = dataset_class(root=base_path + '/data', train=False, download=True, transform=transform)
+        train = dataset_class(root=base_path / 'data', train=True, download=True, transform=transform)
+        test = dataset_class(root=base_path / 'data', train=False, download=True, transform=transform)
 
         np.random.seed(self.seed)
 

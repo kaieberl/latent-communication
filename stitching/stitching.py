@@ -2,7 +2,6 @@ from pathlib import Path
 
 import numpy as np
 import torch
-import torchvision.transforms as transforms
 from omegaconf import DictConfig
 import hydra
 
@@ -66,7 +65,7 @@ def main(cfg: DictConfig) -> None:
     with torch.no_grad():
         for data in test_loader:
             images, labels = data
-            images,labels = images.to(device),labels.to(device)
+            images, labels = images.to(device), labels.to(device)
             outputs = get_stitched_output(model1, model2, mapping, images)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)

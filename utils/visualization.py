@@ -1,5 +1,3 @@
-import sys
-
 import numpy as np
 import pandas as pd
 import torch
@@ -34,9 +32,9 @@ def visualize_latent_space_pca(latents, labels, fig_path=None, anchors=None, pca
         alpha: Optional; Alpha value for the highlighted points.
     """
     if isinstance(latents, torch.Tensor):
-        latents = latents.detach().numpy()
+        latents = latents.detach().cpu().numpy()
     if isinstance(labels, torch.Tensor):
-        labels = labels.numpy()
+        labels = labels.detach().cpu().numpy()
 
     if pca is None:
         pca = PCA(n_components=2)
@@ -118,6 +116,10 @@ def visualize_results(cfg, labels, latents1, latents2):
     Returns:
         None
     """
+    if isinstance(latents1, torch.Tensor):
+        latents1 = latents1.detach().cpu().numpy()
+    if isinstance(latents2, torch.Tensor):
+        latents2 = latents2.detach().cpu().numpy()
     errors = np.linalg.norm(latents1 - latents2, axis=1)
 
     pca, latents1_2d = visualize_latent_space_pca(latents1, labels,

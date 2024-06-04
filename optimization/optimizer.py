@@ -67,9 +67,9 @@ class AffineFitting(BaseOptimizer):
         return print("Results saved at ", path)
 
     def transform(self, z1):
-        if isinstance(z1, np.ndarray):
-            z1 = torch.tensor(z1, dtype=torch.float32)
-        return (z1 @ self.A_aff.value.T + self.b_aff.value).to(torch.float32)
+        if isinstance(z1, torch.Tensor):
+            z1 = z1.cpu().numpy()
+        return torch.from_numpy(z1 @ self.A_aff.value.T + self.b_aff.value)
 
     @classmethod
     def from_file(cls, path):
@@ -143,9 +143,9 @@ class LinearFitting(BaseOptimizer):
         return print("Results saved at ", path)
 
     def transform(self, z1):
-        if isinstance(z1, np.ndarray):
-            z1 = torch.tensor(z1, dtype=torch.float32)
-        return (z1 @ self.A.value.T).to(torch.float32)
+        if isinstance(z1, torch.Tensor):
+            z1 = z1.cpu().numpy()
+        return torch.from_numpy(z1 @ self.A.value.T)
 
     @classmethod
     def from_file(cls, path):
