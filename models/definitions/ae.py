@@ -1,5 +1,5 @@
 import torch
-from models.definitions.base_model import LightningBaseModel
+from models.definitions.base_model import BaseModel
 
 import torch.nn.init as init
 import torch.nn as nn
@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 
 
-class LightningAutoencoder(LightningBaseModel):
+class LightningAutoencoder(BaseModel):
     def __init__(self):
         super().__init__()
         self.autoencoder = nn.Module()
@@ -117,7 +117,7 @@ class LightningAutoencoder(LightningBaseModel):
         return x
     
 
-class AEClassifier(LightningBaseModel):
+class AEClassifier(BaseModel):
     def __init__(self, n_classes):
         super().__init__()
         self.size_classes = n_classes

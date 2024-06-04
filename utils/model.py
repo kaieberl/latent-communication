@@ -1,7 +1,7 @@
 import torch
 import torchvision.transforms as transforms
 
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('mps') if torch.backends.mps.is_available() else 'cpu'
+device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
 
 
 def load_model(model_name, model_path=None, *args, **kwargs):

@@ -55,7 +55,7 @@ class BaseModel(nn.Module, ABC):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('mps') if torch.backends.mps.is_available() else 'cpu'
+        self.device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
 
     @abstractmethod
     def decode(self, z: torch.Tensor) -> torch.Tensor:

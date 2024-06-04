@@ -8,7 +8,7 @@ import torch
 #os.chdir('/Users/mariotuci/Desktop/Google-Drive/Master/SoSe-24/Project Studies/Project/Code/latent-communication')
 from models.definitions.base_model import BaseModel
 
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('mps') if torch.backends.mps.is_available() else 'cpu'
+device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
 
 
 class VAE(BaseModel):
