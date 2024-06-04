@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from utils.dataloader_mnist_single import DataLoaderMNIST
+from utils.dataloaders.dataloader_mnist_single import DataLoaderMNIST
 
 
 def simple_sampler(indices, model, transformations, device, seed=10):

@@ -68,7 +68,7 @@ class VAE(BaseModel):
         )
 
     def encode(self, x):
-        """"
+        """
         Encodes the input by passing through the encoder network
         and returns the mean and log variance of the encoded input.
         """
