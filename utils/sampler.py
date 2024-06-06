@@ -29,6 +29,85 @@ def simple_sampler(indices, model, transformations, device, seed=10):
     z = z.detach().cpu().numpy()
     return z, data_loader.train_loader.dataset.dataset.targets[indices]
 
+import numpy as np
+import torch
+
+def simple_sampler_v1(samples, model, transformations, device, seed=10):
+    """
+    Input:
+    - model: Model 
+    - samples: Number of samples
+    - transformations: Transformations to be applied to the images
+    Output:
+    - z: Latent vectors of the model
+    - labels: Labels of the dataset
+
+    This function samples the latent space of the model and returns the latent vectors
+    """
+    data_loader = DataLoaderMNIST(128, transformations, seed=seed)
+    train_loader = data_loader.get_train_loader()
+
+    # Get all images from train_loader and convert them to latent space
+    all_images = []
+    all_labels = []
+    for images, labels in train_loader:
+        images = images.to(device)
+        latent_space = model.get_latent_space(images)
+        latent_space = latent_space.detach().cpu()
+        all_images.append(latent_space)
+        all_labels.extend(labels.cpu().numpy())
+    
+    all_images = torch.cat(all_images, dim=0)
+    all_labels = np.array(all_labels)
+
+    # Sample the latent space
+    indices = np.random.choice(len(all_images), samples, replace=False)
+    z = all_images[indices]
+    labels = all_labels[indices]
+
+    return z.numpy(), labels
+
+# Assuming DataLoaderMNIST and model are defined elsewhere in your code
+
+
+def exluding_sampler_v1(m, labels, model, data_loader, device):
+    """
+    Input:
+    - m: Samples
+    - labels: List of labels to exclude
+    - model: Model
+    Output:
+    - z: Latent vectors of the model
+
+    This function samples the latent space of the model and returns the latent vectors
+    We exclude the labels from the list
+    """
+    images, _ = next(iter(data_loader.train_loader))
+    all_images = []
+    all_labels = []
+    for images, labels in data_loader.train_loader:
+        all_images.append(images)
+        all_labels.append(labels)
+    # Concatenate all the batches to form a single tensor for images and labels
+    all_images = torch.cat(all_images, dim=0)
+    all_labels = torch.cat(all_labels, dim=0)
+
+    # Exclude labels
+    indices = []
+    for label in labels:
+        indices_label = np.where(all_labels != label)[0]
+        indices.extend(indices_label)
+    
+    all_images_sample = all_images[indices]
+    all_labels_sample = all_labels[indices]
+    # Get latent space 
+    z = model.get_latent_space(all_images_sample.to(device))
+
+    # Detach from GPU
+    z = z.detach().cpu().numpy()
+
+    return z, all_labels_sample
+
 
 def class_sampler(m, model1, model2, data_loader, device):
     """
