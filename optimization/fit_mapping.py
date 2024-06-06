@@ -11,7 +11,7 @@ from utils.model import load_model, get_transformations
 from utils.sampler import simple_sampler
 from utils.visualization import visualize_results
 
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('mps') if torch.backends.mps.is_available() else 'cpu'
+device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
 
 
 def get_latents(cfg, test=False):

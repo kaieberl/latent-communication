@@ -8,7 +8,7 @@ import hydra
 from utils.dataloaders.dataloader_mnist_single import DataLoaderMNIST
 from utils.model import load_models, get_accuracy, get_transformations, get_reconstruction_error
 
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('mps') if torch.backends.mps.is_available() else 'cpu'
+device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
 
 
 def get_stitched_output(model1, model2, mapping, images):
