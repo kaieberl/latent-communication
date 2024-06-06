@@ -1,10 +1,9 @@
 import torch
-from models.definitions.base_model import LightningBaseModel
-
-import torch.nn.init as init
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.nn.init as init
 
+from models.definitions.base_model import LightningBaseModel
 
 
 class LightningAutoencoderV2(LightningBaseModel):

@@ -1,0 +1,14 @@
+experiment_name: ResNetVAE-LinearTransform
+mapping: Linear
+lamda: 0.01
+num_samples: 100
+base_dir: .
+storage_path: ${base_dir}/results/transformations/${.experiment_name}
+model1:
+  seed: 0
+  path: ${base_dir}/models/checkpoints/ResNetVAE/resnet_vae_mnist_seed${.seed}.pth
+  name: resnet_vae
+model2:
+  seed: 1
+  path: ${base_dir}/models/checkpoints/ResNetVAE/resnet_vae_mnist_seed${.seed}.pth
+  name: resnet_vae

@@ -82,7 +82,7 @@ class VAE(BaseModel):
 
     def decode(self, z):
         """
-        Ta
+        Takes the latent space representation and decodes it to the original input
         """
         result = self.decoder_input(z)
         result = self.decoder(result)
@@ -102,7 +102,6 @@ class VAE(BaseModel):
         """
         Passes through the encoder and decoder and returns the output.
         Using reparameterization trick to sample from the latent space.
-
         """
         mu, log_var = self.encode(x)
         z = self.reparameterize(mu, log_var)
@@ -112,7 +111,6 @@ class VAE(BaseModel):
     def loss_function(self, x, x_reconst, mu, log_var):
         """
         Returns the loss function for the VAE.
-
         """
         reconst_loss = nn.functional.mse_loss(x_reconst, x, reduction='sum')
         kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
