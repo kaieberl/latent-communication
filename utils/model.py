@@ -3,7 +3,8 @@ import torchvision.transforms as transforms
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('mps') if torch.backends.mps.is_available() else 'cpu'
 
-def load_model(model_name, model_path):
+
+def load_model(model_name, model_path=None, *args, **kwargs):
     """
     Load the model from the given path.
     """
@@ -19,10 +20,17 @@ def load_model(model_name, model_path):
     elif model_name == 'ae':
         from models.definitions.ae import LightningAutoencoder as AE
         model = AE().to(device)
+    elif model_name == 'resnet_ae':
+        from models.definitions.resnet_ae import ResnetAE
+        model = ResnetAE(1, 512).to(device)
+    elif model_name == 'resnet_vae':
+        from models.definitions.resnet_vae import ResnetVAE
+        model = ResnetVAE(512, 1).to(device)
     else:
         raise ValueError(f"Unknown model name: {model_name}")
-    
-    model.load_state_dict(torch.load(model_path, map_location=device))
+
+    if model_path is not None:
+        model.load_state_dict(torch.load(model_path, map_location=device))
     return model.to(device)
 
 
@@ -53,11 +61,11 @@ def get_transformations(model_name):
             transforms.Resize((224, 224)),
             transforms.Lambda(lambda x: x.repeat(3, 1, 1))
         ]
-    elif model_name == 'ae':
+    elif model_name in ['ae', 'resnet_ae', 'resnet_vae']:
         return [
-            transforms.ToTensor(), 
-            transforms.Normalize((0.5,), (0.5,)) 
-            ]
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,), (0.5,))
+        ]
     else:
         raise ValueError(f"Unknown model name: {model_name}")
 
@@ -68,7 +76,7 @@ def transformations(cfg):
     return transformations1, transformations2
 
 
-def get_accuracy(model,test_loader):
+def get_accuracy(model, test_loader):
     """
     Calculate the accuracy of the model on the given test set.
     """
@@ -88,6 +96,7 @@ def get_accuracy(model,test_loader):
     accuracy = 100 * correct / total
     return accuracy
 
+
 def get_reconstruction_error(model, test_loader):
     """
     Calculate the reconstruction error of the model on the given test set.
@@ -99,6 +108,12 @@ def get_reconstruction_error(model, test_loader):
             images, _ = data
             images = images.to(device)
             outputs = model(images)
-            loss = model.loss_function(images, outputs[0], outputs[1], outputs[2])
+            loss = model.loss_function(images, *outputs) if isinstance(outputs, tuple) else model.loss_function(images,
+                                                                                                                outputs)
             total_loss += loss.item()
+            # plot the image
+            # plt.imshow(images[0].cpu().numpy().reshape(28, 28), cmap='gray')
+            # plt.show()
+            # plt.imshow(outputs[0].cpu().numpy().reshape(28, 28), cmap='gray')
+            # plt.show()
     return total_loss / len(test_loader.dataset)
