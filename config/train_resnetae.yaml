@@ -1,0 +1,7 @@
+experiment_name: ResNetAE-LinearTransform
+epochs: 10
+batch_size: 64
+base_dir: .
+seed: 0
+path: ${base_dir}/models/checkpoints/ResNetAE/resnet_ae_mnist_seed${.seed}.pth
+name: resnet_ae
