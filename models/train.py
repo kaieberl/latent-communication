@@ -35,6 +35,8 @@ class MNISTDataModule(L.LightningDataModule):
 
 @hydra.main(config_path="../config")
 def main(cfg):
+    cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
+
     seeds = range(3)
 
     for seed in seeds:
@@ -43,7 +45,7 @@ def main(cfg):
         transformations = Compose(get_transformations(cfg.name))
         data_module = MNISTDataModule(transformations)
         model = load_model(cfg.name)
-        trainer = Trainer(max_epochs=10)
+        trainer = Trainer(max_epochs=cfg.epochs)
         trainer.fit(model, datamodule=data_module)
 
         torch.save(model.state_dict(), cfg.path)

@@ -37,7 +37,7 @@ class Decoder(nn.Module):
             nn.ConvTranspose2d(64, 64, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.ConvTranspose2d(64, out_channels, kernel_size=4, stride=2, padding=1),
-            nn.Sigmoid()  # Output between 0 and 1
+            nn.Tanh()
         )
 
     def forward(self, z):
@@ -70,10 +70,10 @@ class ResnetVAE(LightningBaseModel):
         self.log('train_loss', loss)
         return loss
 
-    def loss_function(self, x, recon_x, mu, logvar):
-        BCE = F.binary_cross_entropy(recon_x, x, reduction='sum')
-        KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-        return BCE + KLD
+    def loss_function(self, x, x_reconst, mu, log_var):
+        reconst_loss = F.mse_loss(x_reconst, x, reduction='sum')
+        kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+        return reconst_loss + kl_div
 
     def validation_step(self, batch, batch_idx):
         x, _ = batch
@@ -97,3 +97,9 @@ def reparameterize(mu, logvar):
     std = torch.exp(0.5 * logvar)
     eps = torch.randn_like(std)
     return mu + eps * std
+
+
+def vae_loss(recon_x, x, mu, logvar):
+    BCE = F.binary_cross_entropy(recon_x, x, reduction='sum')
+    KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+    return BCE + KLD

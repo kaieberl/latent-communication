@@ -1,5 +1,6 @@
 import torch
 import torchvision.transforms as transforms
+import matplotlib.pyplot as plt
 
 device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
 
@@ -114,6 +115,8 @@ def get_reconstruction_error(model, test_loader):
             # plot the image
             # plt.imshow(images[0].cpu().numpy().reshape(28, 28), cmap='gray')
             # plt.show()
+            # if isinstance(outputs, tuple):
+            #     outputs = outputs[0]
             # plt.imshow(outputs[0].cpu().numpy().reshape(28, 28), cmap='gray')
             # plt.show()
     return total_loss / len(test_loader.dataset)
