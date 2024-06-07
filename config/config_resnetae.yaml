@@ -6,9 +6,9 @@ base_dir: .
 storage_path: ${base_dir}/results/transformations/${.experiment_name}
 model1:
   seed: 0
-  path: ${base_dir}/models/checkpoints/ResNetAE/resnet_ae_mnist_seed${.seed}.pth
+  path: ${base_dir}/models/checkpoints/ResNetAE/resnet_ae_mnist_seed${.seed}_50.pth
   name: resnet_ae
 model2:
   seed: 1
-  path: ${base_dir}/models/checkpoints/ResNetAE/resnet_ae_mnist_seed${.seed}.pth
+  path: ${base_dir}/models/checkpoints/ResNetAE/resnet_ae_mnist_seed${.seed}_50.pth
   name: resnet_ae

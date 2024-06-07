@@ -91,7 +91,8 @@ class ResnetAE(LightningBaseModel):
         return loss
 
     def loss_function(self, x_hat, x):
-        return F.mse_loss(x_hat, x)
+        l1_norm = sum(p.abs().sum() for p in self.parameters())
+        return F.mse_loss(x_hat, x) + 1e-3 * l1_norm
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=1e-3)

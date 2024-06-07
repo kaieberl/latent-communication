@@ -37,9 +37,8 @@ class MNISTDataModule(L.LightningDataModule):
 def main(cfg):
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
 
-    seeds = range(3)
-
-    for seed in seeds:
+    for seed in cfg.seeds:
+        cfg.seed = seed
         L.seed_everything(seed)
 
         transformations = Compose(get_transformations(cfg.name))
