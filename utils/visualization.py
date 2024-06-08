@@ -17,7 +17,7 @@ def plot_latent_space(ax, df, targets, size, cmap, norm, bg_alpha=1, alpha=1):
     return ax
 
 
-def visualize_latent_space_pca(latents, labels, fig_path=None, anchors=None, pca=None, size=10, bg_alpha=1, alpha=1):
+def visualize_latent_space_pca(latents, labels, fig_path=None, anchors=None, pca=None, size=10, bg_alpha=1, alpha=1, title  = None):
     """
     Visualizes the 2D latent space obtained from PCA.
 
@@ -43,6 +43,9 @@ def visualize_latent_space_pca(latents, labels, fig_path=None, anchors=None, pca
         latents_2d = pca.transform(latents)
 
     # Normalize latents
+    minimum = latents_2d.min(axis=0)
+    maximum = latents_2d.max(axis=0)
+
     latents_2d -= latents_2d.min(axis=0)
     latents_2d /= latents_2d.max(axis=0)
 
@@ -60,7 +63,9 @@ def visualize_latent_space_pca(latents, labels, fig_path=None, anchors=None, pca
     if anchors is not None:
         # plot anchors with star marker
         anchors_2d = pca.transform(anchors.view(anchors.size(0), -1).cpu().detach().numpy())
-        ax.scatter(anchors_2d[:, 0], anchors_2d[:, 1], marker='*', s=100, c='black')
+        anchors_2d -= minimum 
+        anchors_2d /= maximum
+        ax.scatter(anchors_2d[:, 0], anchors_2d[:, 1], marker='*', s=15, c='black')
 
     #plt.title('2D PCA of Latent Space')
     if fig_path is not None:
