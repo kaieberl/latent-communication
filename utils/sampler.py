@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 from utils.dataloaders.dataloader_mnist_single import DataLoaderMNIST
+import math
+import torch.nn.functional as F
 
 
 def simple_sampler(indices, model, transformations, device, seed=10):
@@ -32,6 +34,92 @@ def simple_sampler(indices, model, transformations, device, seed=10):
 import numpy as np
 import torch
 
+def collect_dataset(data_loader, batch_size, transformations, seed):
+    dataset = []
+    labels = []
+    data_loader = data_loader(batch_size, transformations, seed=seed)
+    train_loader = data_loader.get_train_loader()
+    for _, images, labels_batch in train_loader:
+        dataset.extend(images)
+        labels.extend(labels_batch)
+    return torch.stack(dataset), torch.tensor(labels)
+
+def sample_equally_per_class(n_samples, data_loader, batch_size=128, transformations=[], seed=0):
+    dataset, labels = collect_dataset(data_loader, batch_size, transformations, seed)
+    label_to_images = {label.item(): [] for label in torch.unique(labels)}
+    
+    for image, label in zip(dataset, labels):
+        label_to_images[label.item()].append(image)
+
+    n_per_class = n_samples // len(label_to_images)
+    images_sampled = []
+    labels_sampled = []
+    
+    for label, images in label_to_images.items():
+        indices = np.random.choice(len(images), n_per_class, replace=False)
+        images_sampled.extend([images[i] for i in indices])
+        labels_sampled.extend([label] * n_per_class)
+
+    return torch.stack(images_sampled), torch.tensor(labels_sampled)
+
+
+def sample_with_half_best_classes(n_samples, model, data_loader, batch_size=128, transformations=[], seed=0, loss_fun=F.mse_loss, device='cpu'):
+    dataset, labels = collect_dataset(data_loader, batch_size, transformations, seed)
+    label_to_images = {label.item(): [] for label in torch.unique(labels)}
+    losses_by_class = {label.item(): [] for label in torch.unique(labels)}
+    
+    for image, label in zip(dataset, labels):
+        label = label.item()
+        image = image.to(device)
+        x = model(image.unsqueeze(0))
+        loss = loss_fun(x, image.unsqueeze(0)).item()
+        label_to_images[label].append(image)
+        losses_by_class[label].append(loss)
+    
+    best_classes = sorted(losses_by_class, key=lambda x: np.mean(losses_by_class[x]))[len(losses_by_class)//2:]
+    
+    label_to_images = {k: v for k, v in label_to_images.items() if k in best_classes}
+    n_per_class = n_samples // len(label_to_images)
+    images_sampled = []
+    labels_sampled = []
+    
+    for label, images in label_to_images.items():
+        indices = np.random.choice(len(images), n_per_class, replace=False)
+        images_sampled.extend([images[i] for i in indices])
+        labels_sampled.extend([label] * n_per_class)
+
+    return torch.stack(images_sampled), torch.tensor(labels_sampled)
+
+
+def sample_with_half_worst_classes(n_samples, model, data_loader, batch_size=128, transformations=[], seed=0, loss_fun=F.mse_loss, device='cpu'):
+    dataset, labels = collect_dataset(data_loader, batch_size, transformations, seed)
+    label_to_images = {label.item(): [] for label in torch.unique(labels)}
+    losses_by_class = {label.item(): [] for label in torch.unique(labels)}
+    
+    for image, label in zip(dataset, labels):
+        label = label.item()
+        image = image.to(device)
+        x = model(image.unsqueeze(0))
+        loss = loss_fun(x, image.unsqueeze(0)).item()
+        label_to_images[label].append(image)
+        losses_by_class[label].append(loss)
+    
+    worst_classes = sorted(losses_by_class, key=lambda x: np.mean(losses_by_class[x]))[:len(losses_by_class)//2]
+    
+    label_to_images = {k: v for k, v in label_to_images.items() if k in worst_classes}
+    n_per_class = n_samples // len(label_to_images)
+    images_sampled = []
+    labels_sampled = []
+    
+    for label, images in label_to_images.items():
+        indices = np.random.choice(len(images), n_per_class, replace=False)
+        images_sampled.extend([images[i] for i in indices])
+        labels_sampled.extend([label] * n_per_class)
+
+    return torch.stack(images_sampled), torch.tensor(labels_sampled)
+
+
+###
 def simple_sampler_v1(samples, model, transformations, device, seed=10):
     """
     Input:
