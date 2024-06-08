@@ -2,15 +2,15 @@ experiment_name: AE-LinearTransform
 mapping: Affine
 lamda: 0.01
 num_samples: 100
-base_dir: /Users/federicoferoggio/Documents/vs_code/latent-communication
-storage_path: /Users/federicoferoggio/Documents/vs_code/latent-communication/results/transformations/${.experiment_name}
+base_dir: .
+storage_path: ${basedir}/results/transformations/${.experiment_name}
 model1:
   seed: 4
-  path: /Users/federicoferoggio/Documents/vs_code/latent-communication/models/checkpoints/AE/MNIST/MNIST_AE_4_10.pth
+  path: ${basedir}/models/checkpoints/AE/MNIST/MNIST_AE_4_10.pth
   name: ae
 model2:
   seed: 4
-  path: /Users/federicoferoggio/Documents/vs_code/latent-communication/models/checkpoints/AE/MNIST/MNIST_AE_4_1.pth
+  path: ${basedir}/models/checkpoints/AE/MNIST/MNIST_AE_4_1.pth
   name: ae
 
 #MSE: 0.1755

@@ -62,7 +62,7 @@ def visualize_latent_space_pca(latents, labels, fig_path=None, anchors=None, pca
         anchors_2d = pca.transform(anchors.view(anchors.size(0), -1).cpu().detach().numpy())
         ax.scatter(anchors_2d[:, 0], anchors_2d[:, 1], marker='*', s=100, c='black')
 
-    plt.title('2D PCA of Latent Space')
+    #plt.title('2D PCA of Latent Space')
     if fig_path is not None:
         plt.savefig(fig_path)
     plt.show()

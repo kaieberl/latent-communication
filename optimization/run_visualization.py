@@ -1,25 +1,73 @@
 import numpy as np
+from omegaconf import DictConfig
+import hydra
 import torch
+from pathlib import Path
 
 from utils.visualization import visualize_mapping_error, visualize_latent_space_pca
+from utils.dataloaders.dataloader_mnist_single import DataLoaderMNIST
+from utils.model import load_models, get_transformations
+from stitching.stitching import load_mapping
 
-labels = torch.load(f"models/labels_test.pt", map_location='cpu')
-latents1 = torch.load(f"models/latent_space_vit_seed1_test.pt", map_location='cpu').detach().numpy()
-latents2 = torch.load(f"models/latent_space_vit_seed0_test.pt", map_location='cpu').detach().numpy()
-A = np.load("../optimization/ViT-Linear/Linear_vit_0_vit_1_100.npy")
-latents2_trafo = latents2 @ A.T
+device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
+device='cpu'
 
-print(f"Mean error for linear mapping: {np.mean(np.linalg.norm(latents1 - latents2_trafo, axis=1)):.4f}")
-pca, latents1_2d = visualize_latent_space_pca(latents1, labels, "figures/latent_space_pca_vit_seed1_test_.png")
-errors = np.linalg.norm(latents1 - latents2_trafo, axis=1)
-visualize_latent_space_pca(latents2_trafo, labels, "figures/latent_space_pca_vit_seed0_test_linear_.png", pca=pca)
-visualize_mapping_error(latents1_2d, errors, "figures/mapping_error_vit_seed0_seed1_test_linear_.png")
+def get_latent_space_from_dataloader(model, dataloader,max_nr_batches=10):
+    print("Calculating latent_spaces")
+    latents = []
+    labels = []
+    N=0
+    for data in dataloader:
+        N+=1
+        if N<max_nr_batches:
+            image, label = data
+            image, label = image.to(device), label.to(device)
+            latent = model.get_latent_space(image)
+            latents.append(latent)
+            labels.append(label)
+        else:
+            #skip for loop
+            break
+    print("Finished calculating latent_spaces")
+    return torch.cat(latents), torch.cat(labels)
 
-data = np.load("../optimization/ViT-Linear/Affine_vit_0_vit_1_100.npz")
-A, b = data['A'], data['b']
-del data
-latents2 = latents2 @ A.T
-print(f"Mean error for affine mapping: {np.mean(np.linalg.norm(latents1 - latents2, axis=1)):.4f}")
-errors = np.linalg.norm(latents1 - latents2, axis=1)
-visualize_latent_space_pca(latents2, labels, "figures/latent_space_pca_vit_seed0_test_affine_.png", pca=pca)
-visualize_mapping_error(latents1_2d, errors, "figures/mapping_error_vit_seed0_seed1_test_affine_.png")
+@hydra.main(version_base="1.1", config_path="../config")
+def main(cfg : DictConfig) -> None:
+    cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
+    #Load test data set to plot
+    data_loader_model = DataLoaderMNIST(128, get_transformations(cfg.model1.name), seed=10, base_path = cfg.base_dir)
+    test_loader = data_loader_model.get_test_loader()
+    print("loaded data")
+
+    #Load model
+    model1, model2 = load_models(cfg)
+    model1 = model1.to(device)
+    model2 = model2.to(device)
+    model1.eval()
+    model2.eval()
+
+    #Load mapping
+    mapping = load_mapping(cfg)
+
+    #Get the latent space of the test set
+    latents1,labels = get_latent_space_from_dataloader(model1, test_loader)
+    latents2,labels2 = get_latent_space_from_dataloader(model2, test_loader)
+
+    latents1 = latents1.detach().numpy()
+    latents2 = latents2.detach().numpy()
+    labels = labels.detach().numpy()
+
+    #Get transformed latent space
+    latents1_trafo = mapping.transform(latents1).detach().numpy()
+
+    #Plot the results
+    print("Plotting")
+    print(f"Mean error for {cfg.mapping} mapping: {np.mean(np.linalg.norm(latents2 - latents1_trafo, axis=1)):.4f}")
+    visualize_latent_space_pca(latents1, labels, f"../../figures/latent_space_pca_{cfg.model1.name}_{cfg.model1.seed}_test_.png")
+    pca, _ = visualize_latent_space_pca(latents2, labels, f"../../figures/latent_space_pca_{cfg.model2.name}_{cfg.model2.seed}_test_.png")
+    visualize_latent_space_pca(latents1_trafo, labels, f"../../figures/latent_space_pca_{cfg.mapping}_{cfg.model1.name}_seed{cfg.model1.seed}_{cfg.model1.name}_seed{cfg.model2.seed}_test_{cfg.mapping}_.png", pca=pca)
+    #errors = np.linalg.norm(latents2 - latents1_trafo, axis=1)
+    #visualize_mapping_error(latents2_2d, errors, f"../../figures/mapping_error_{cfg.model1.name}_seed{cfg.model1.seed}_{cfg.model1.name}_seed{cfg.model2.seed}_test_linear_.png")
+
+if __name__ == "__main__":
+    main()

@@ -1,5 +1,5 @@
-experiment_name: ResNet-LinearTransform
-mapping: Linear
+experiment_name: ResNet-AffineTransform
+mapping: Affine
 lamda: 0.01
 num_samples: 100
 base_dir: .
