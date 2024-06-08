@@ -19,6 +19,7 @@ def get_stitched_output(model1, model2, mapping, images):
         latent_space_stitched = torch.tensor(latent_space_stitched, dtype=torch.float32)
     elif isinstance(latent_space_stitched, torch.Tensor):
         latent_space_stitched = latent_space_stitched.to(dtype=torch.float32)
+    
     outputs = model2.decode(latent_space_stitched.to(device))
     return outputs
 
