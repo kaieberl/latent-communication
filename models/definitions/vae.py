@@ -2,6 +2,7 @@ from typing import List
 
 import torch.nn as nn
 import torch
+from tqdm import tqdm
 # get working directory
 # import os
 # Change directory
@@ -47,7 +48,6 @@ class VAE(BaseModel):
         # Build the encoder
         self.encoder = nn.Sequential(*modules)
 
-        
         # Build Decoder
         modules = []
         self.decoder_input = nn.Linear(distribution_dim, dims[-1])
@@ -59,9 +59,9 @@ class VAE(BaseModel):
                     nn.ReLU())
             )
   
-
         self.decoder = nn.Sequential(*modules)
 
+        # Final Layer 
         self.final_layer = nn.Sequential(
             nn.Linear(dims[0], in_dim),
             nn.Tanh()
@@ -84,6 +84,7 @@ class VAE(BaseModel):
         """
         Takes the latent space representation and decodes it to the original input
         """
+
         result = self.decoder_input(z)
         result = self.decoder(result)
         result = self.final_layer(result)
@@ -133,3 +134,4 @@ class VAE(BaseModel):
         result = self.encoder(x)
         result = torch.flatten(result, start_dim=1)
         return result
+    
