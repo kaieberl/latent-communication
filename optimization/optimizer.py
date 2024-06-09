@@ -68,7 +68,7 @@ class AffineFitting(BaseOptimizer):
 
     def transform(self, z1):
         if isinstance(z1, torch.Tensor):
-            z1 = z1.cpu().numpy()
+            z1 = z1.detach().cpu().numpy()
         return torch.from_numpy(z1 @ self.A_aff.value.T + self.b_aff.value)
 
     @classmethod
@@ -144,7 +144,7 @@ class LinearFitting(BaseOptimizer):
 
     def transform(self, z1):
         if isinstance(z1, torch.Tensor):
-            z1 = z1.cpu().numpy()
+            z1 = z1.detach().cpu().numpy()
         return torch.from_numpy(z1 @ self.A.value.T)
 
     @classmethod

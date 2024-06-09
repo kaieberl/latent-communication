@@ -119,4 +119,7 @@ def get_reconstruction_error(model, test_loader):
             #     outputs = outputs[0]
             # plt.imshow(outputs[0].cpu().numpy().reshape(28, 28), cmap='gray')
             # plt.show()
+            # # plot pixel-wise difference
+            # plt.imshow((images[0] - outputs[0]).cpu().numpy().reshape(28, 28), cmap='gray')
+            # plt.show()
     return total_loss / len(test_loader.dataset)

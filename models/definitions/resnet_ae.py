@@ -27,7 +27,7 @@ class ResNetBlock(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, in_channels):
+    def __init__(self, in_channels, hidden_dim):
         super(Encoder, self).__init__()
         self.initial = nn.Sequential(
             nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False),
@@ -35,21 +35,22 @@ class Encoder(nn.Module):
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         )
-        self.resblock1 = ResNetBlock(64)
-        self.resblock2 = ResNetBlock(64)
+        self.resblock = ResNetBlock(64)
+        self.fc = nn.Linear(64 * 7 * 7, hidden_dim)
 
     def forward(self, x):
         x = self.initial(x)
-        x = self.resblock1(x)
-        x = self.resblock2(x)
+        x = self.resblock(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc(x)
         return x
 
 
 class Decoder(nn.Module):
-    def __init__(self, out_channels):
+    def __init__(self, hidden_dim, out_channels):
         super(Decoder, self).__init__()
-        self.resblock1 = ResNetBlock(64)
-        self.resblock2 = ResNetBlock(64)
+        self.fc = nn.Linear(hidden_dim, 64 * 7 * 7)
+        self.resblock = ResNetBlock(64)
         self.final = nn.Sequential(
             nn.ConvTranspose2d(64, 64, kernel_size=4, stride=2, padding=1),
             nn.ReLU(inplace=True),
@@ -58,8 +59,9 @@ class Decoder(nn.Module):
         )
 
     def forward(self, x):
-        x = self.resblock1(x)
-        x = self.resblock2(x)
+        x = self.fc(x)
+        x = x.view(x.size(0), 64, 7, 7)
+        x = self.resblock(x)
         x = self.final(x)
         return x
 
@@ -67,8 +69,8 @@ class Decoder(nn.Module):
 class ResnetAE(LightningBaseModel):
     def __init__(self, in_channels, hidden_dim, *args, **kwargs):
         super().__init__()
-        self.encoder = Encoder(in_channels)
-        self.decoder = Decoder(in_channels)
+        self.encoder = Encoder(in_channels, hidden_dim)
+        self.decoder = Decoder(hidden_dim, in_channels)
         self.hidden_dim = hidden_dim
 
     def forward(self, x):
@@ -105,3 +107,11 @@ class ResnetAE(LightningBaseModel):
 
     def get_latent_space(self, x):
         return self.encode(x)
+
+    def get_latent_space_from_dataloader(self, dataloader):
+        latents = []
+        labels = []
+        for x, y in dataloader:
+            latents.append(self.get_latent_space(x))
+            labels.append(y)
+        return torch.cat(latents), torch.cat(labels)

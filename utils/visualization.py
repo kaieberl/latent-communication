@@ -3,6 +3,7 @@ import pandas as pd
 import torch
 from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
+import seaborn as sns
 
 
 def highlight_cluster(ax, df, target, alpha, cmap, norm, size=5):
@@ -108,9 +109,32 @@ def visualize_mapping_error(latent1, errors, fig_path=None):
     plt.show()
 
 
+def plot_error_dist(errors, labels, fig_path=None):
+    """
+    Plots the distribution of mapping errors.
+
+    Args:
+        errors: A tensor or numpy array of shape (N,), representing the mapping errors.
+        labels: A tensor or numpy array of shape (N,), representing the labels for each latent point.
+        mapping: A string representing the type of mapping used.
+        fig_path: Optional; Path to save the figure.
+    """
+    if isinstance(errors, torch.Tensor):
+        errors = errors.numpy()
+    for label in np.unique(labels):
+        sns.kdeplot(errors[labels == label], label=f'Class {label}', shade=True)
+    plt.title('Mapping Error Distribution')
+    plt.xlabel('Mapping Error')
+    plt.ylabel('Density')
+    plt.legend()
+    if fig_path is not None:
+        plt.savefig(fig_path)
+    plt.show()
+
+
 def visualize_results(cfg, labels, latents1, latents2):
     """
-    Creates two scatter plots of the input latent spaces and a scatter plot of the error between the two latent spaces.
+    Creates two scatter plots of the input latent spaces and a scatter plot of the error between the two latent spaces, as well as a histogram of the error distribution by class.
 
     Args:
         cfg (DictConfig): Configuration dictionary
@@ -135,3 +159,4 @@ def visualize_results(cfg, labels, latents1, latents2):
     visualize_mapping_error(latents1_2d, errors,
                             f"{cfg.storage_path}/mapping_error_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}.png")
     print(f"MSE: {np.mean(errors):.4f}")
+    plot_error_dist(errors, labels, f"{cfg.storage_path}/mapping_error_distribution_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}.png")
