@@ -5,11 +5,9 @@ from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
 import seaborn as sns
 
-
 def highlight_cluster(ax, df, target, alpha, cmap, norm, size=5):
     cluster_df = df[df["target"] == target]
     ax.scatter(cluster_df.x, cluster_df.y, c=cmap(norm(cluster_df["target"])), alpha=alpha, s=size)
-
 
 def plot_latent_space(ax, df, targets, size, cmap, norm, bg_alpha=1, alpha=1):
     ax.scatter(df.x, df.y, c=cmap(norm(df["target"])), alpha=bg_alpha, s=size)
@@ -17,8 +15,7 @@ def plot_latent_space(ax, df, targets, size, cmap, norm, bg_alpha=1, alpha=1):
         highlight_cluster(ax, df, target, alpha=alpha, size=size, cmap=cmap, norm=norm)
     return ax
 
-
-def visualize_latent_space_pca(latents, labels, fig_path=None, anchors=None, pca=None, size=10, bg_alpha=1, alpha=1, title  = None):
+def visualize_latent_space_pca(latents, labels, fig_path=None, anchors=None, pca=None, size=10, bg_alpha=1, alpha=1, title=None, show_fig=True):
     """
     Visualizes the 2D latent space obtained from PCA.
 
@@ -47,8 +44,7 @@ def visualize_latent_space_pca(latents, labels, fig_path=None, anchors=None, pca
     minimum = latents_2d.min(axis=0)
     maximum = latents_2d.max(axis=0)
 
-    latents_2d -= latents_2d.min(axis=0)
-    latents_2d /= latents_2d.max(axis=0)
+    latents_2d = (latents_2d - minimum) / (maximum - minimum)
 
     # Create a DataFrame for easy plotting
     latent_df = pd.DataFrame(latents_2d, columns=['x', 'y'])
@@ -64,19 +60,21 @@ def visualize_latent_space_pca(latents, labels, fig_path=None, anchors=None, pca
     if anchors is not None:
         # plot anchors with star marker
         anchors_2d = pca.transform(anchors.view(anchors.size(0), -1).cpu().detach().numpy())
-        anchors_2d -= minimum 
-        anchors_2d /= maximum
-        ax.scatter(anchors_2d[:, 0], anchors_2d[:, 1], marker='*', s=15, c='black')
+        anchors_2d = (anchors_2d - minimum) / (maximum - minimum)
+        ax.scatter(anchors_2d[:, 0], anchors_2d[:, 1], marker='*', s=15, c='black', norm=norm)
 
-    #plt.title('2D PCA of Latent Space')
-    if fig_path is not None:
+    if title:
+        ax.set_title(title)
+
+    if fig_path:
         plt.savefig(fig_path)
-    plt.show()
+    if show_fig:
+        plt.show()
 
     return pca, latents_2d
 
 
-def visualize_mapping_error(latent1, errors, fig_path=None):
+def visualize_mapping_error(latent1, errors, fig_path=None, show_fig=True):
     """
     Visualizes the mapping error between two sets of latent variables.
 
@@ -106,7 +104,8 @@ def visualize_mapping_error(latent1, errors, fig_path=None):
 
     if fig_path is not None:
         plt.savefig(fig_path)
-    plt.show()
+    if show_fig:
+        plt.show()
 
 
 def plot_error_dist(errors, labels, fig_path=None):

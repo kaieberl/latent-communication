@@ -4,3 +4,4 @@
 .DS_Store
 **/.hydra/
 /Latent_Communication.egg-info
+results/transformations/SMALLAE
