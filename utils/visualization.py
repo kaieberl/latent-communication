@@ -33,7 +33,6 @@ def visualize_latent_space_pca(latents, labels, fig_path=None, anchors=None, pca
         latents = latents.detach().cpu().numpy()
     if isinstance(labels, torch.Tensor):
         labels = labels.detach().cpu().numpy()
-
     if pca is None:
         pca = PCA(n_components=2)
         latents_2d = pca.fit_transform(latents)
