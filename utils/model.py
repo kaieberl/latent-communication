@@ -23,10 +23,10 @@ def load_model(model_name, model_path=None, *args, **kwargs):
         model = AE().to(device)
     elif model_name == 'resnet_ae':
         from models.definitions.resnet_ae import ResnetAE
-        model = ResnetAE(1, 512).to(device)
+        model = ResnetAE(1, 50).to(device)
     elif model_name == 'resnet_vae':
         from models.definitions.resnet_vae import ResnetVAE
-        model = ResnetVAE(512, 1).to(device)
+        model = ResnetVAE(50, 1).to(device)
     else:
         raise ValueError(f"Unknown model name: {model_name}")
 
@@ -114,12 +114,15 @@ def get_reconstruction_error(model, test_loader):
             total_loss += loss.item()
             # plot the image
             # plt.imshow(images[0].cpu().numpy().reshape(28, 28), cmap='gray')
+            # plt.axis('off')
             # plt.show()
             # if isinstance(outputs, tuple):
             #     outputs = outputs[0]
             # plt.imshow(outputs[0].cpu().numpy().reshape(28, 28), cmap='gray')
+            # plt.axis('off')
             # plt.show()
             # # plot pixel-wise difference
             # plt.imshow((images[0] - outputs[0]).cpu().numpy().reshape(28, 28), cmap='gray')
+            # plt.axis('off')
             # plt.show()
     return total_loss / len(test_loader.dataset)

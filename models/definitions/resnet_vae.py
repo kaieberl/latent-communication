@@ -83,7 +83,8 @@ class ResnetVAE(LightningBaseModel):
         return loss
 
     def encode(self, x):
-        return self.encoder(x)
+        mu, logvar = self.encoder(x)
+        return reparameterize(mu, logvar)
 
     def decode(self, z):
         return self.decoder(z)

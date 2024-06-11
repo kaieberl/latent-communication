@@ -40,10 +40,9 @@ class VAE(BaseModel):
                 
             in_dim_layer = h_dim 
         
-        # Variance and Mean for the latentspace distribution
+        # Variance and Mean for the latent space distribution
         self.mu = nn.Linear(dims[-1], distribution_dim)
         self.var = nn.Linear(dims[-1], distribution_dim)
-
 
         # Build the encoder
         self.encoder = nn.Sequential(*modules)
@@ -56,7 +55,8 @@ class VAE(BaseModel):
             modules.append(
                 nn.Sequential(
                     nn.Linear(dims[i], dims[i - 1]),
-                    nn.ReLU())
+                    nn.ReLU()
+                )
             )
   
         self.decoder = nn.Sequential(*modules)
