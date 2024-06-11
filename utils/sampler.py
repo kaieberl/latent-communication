@@ -8,6 +8,9 @@ import torch
 import random
 
 from sklearn.decomposition import PCA
+import random
+from scipy.spatial.distance import cdist
+
 
 
 def simple_sampler(indices, model, transformations, device, seed=10):
@@ -60,9 +63,6 @@ def get_latents(images, model, device="cpu"):
 
 
 def sample_furthest_away_images(n_samples, images, labels, model, batch_size=128, device='cpu'):
-    # Initialize the array for sampled points
-    sampled_indices = []
-    
     # Compute latent representations in batches
     latents = []
     for i in range(0, len(images), batch_size):
@@ -75,21 +75,16 @@ def sample_furthest_away_images(n_samples, images, labels, model, batch_size=128
     
     # Randomly select the first point
     first_point_index = random.randint(0, len(latents) - 1)
-    sampled_indices.append(first_point_index)
+    sampled_indices = [first_point_index]
     
     # Iteratively select the next point that maximizes the minimum distance to the already selected points
     for _ in range(1, n_samples):
-        remaining_indices = [i for i in range(len(latents)) if i not in sampled_indices]
-        random.shuffle(remaining_indices)  # Shuffle to choose random points
-        sampled_points = sampled_indices[:10] if len(sampled_indices) >= 10 else sampled_indices
-        max_min_dist = -np.inf
-        next_point_index = -1
+        remaining_indices = np.setdiff1d(np.arange(len(latents)), sampled_indices)
+        max_distances = []
         for i in remaining_indices:
-            random_points = random.sample(remaining_indices, 10)
-            min_dist = min(np.linalg.norm(latents[i] - latents[j]) for j in random_points)
-            if min_dist > max_min_dist:
-                max_min_dist = min_dist
-                next_point_index = i
+            distances = cdist(latents[i].reshape(1, -1), latents[sampled_indices])
+            max_distances.append(np.min(distances))
+        next_point_index = remaining_indices[np.argmax(max_distances)]
         sampled_indices.append(next_point_index)
     
     # Return the sampled images, labels, and their indices

@@ -60,7 +60,7 @@ def visualize_latent_space_pca(latents, labels, fig_path=None, anchors=None, pca
         # plot anchors with star marker
         anchors_2d = pca.transform(anchors.view(anchors.size(0), -1).cpu().detach().numpy())
         anchors_2d = (anchors_2d - minimum) / (maximum - minimum)
-        ax.scatter(anchors_2d[:, 0], anchors_2d[:, 1], marker='*', s=15, c='black', norm=norm)
+        ax.scatter(anchors_2d[:, 0], anchors_2d[:, 1], marker='*', s=10, c='black')
 
     if title:
         ax.set_title(title)

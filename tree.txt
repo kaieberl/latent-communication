@@ -1,0 +1,74 @@
+├── config
+├── data
+├── models
+│   ├── checkpoints
+│   │   ├── SMALLAE
+│   │   │   ├── CIFAR10
+│   │   │   ├── CIFAR100
+│   │   │   ├── FMNIST
+│   │   │   ├── MNIST
+│   │   │   │   ├── MNIST_SMLLAE_0.0001_128_10_3.pth
+│   │   │   │   ├── MNIST_SMLLAE_0.0001_128_10_4.pth
+│   │   │   │   ├── MNIST_SMLLAE_0.0001_128_1_3.pth
+│   │   │   │   ├── MNIST_SMLLAE_0.0001_128_1_4.pth
+│   │   │   │   ├── MNIST_SMLLAE_0.0001_32_10_3.pth
+│   │   │   │   ├── MNIST_SMLLAE_0.0001_32_10_4.pth
+
+...
+│   │   │   │   └── more_metrics.csv
+│   │   │   ├── losses.csv
+│   │   │   └── losses_per_class.csv
+├── optimization
+├── outputs
+├── requirements.txt
+├── results
+│   └── transformations
+│       ├── SMALLAE
+│       │   ├── Affine_MNIST_SMLLAE_0.01_128_20_1_->_MNIST_SMLLAE_0.01_128_20_2_196
+│       │   │   ├── latent_left_sampled_equally.png
+│       │   │   ├── latent_right_sampled_equally.png
+│       │   │   ├── latents1_transformed_sampled_equally.png
+│       │   │   ├── mapping.pth.npz
+│       │   │   ├── mapping_error_Affine_fairsample_.png
+│       │   │   ├── sampled_best_classes
+│       │   │   │   ├── latent_left_sampled_best_classes.png
+│       │   │   │   ├── latent_right_sampled_best_classes.png
+│       │   │   │   ├── latents1_transformed_sampled_best_classes.png
+│       │   │   │   ├── mapping.pth.npz
+│       │   │   │   └── mapping_error_Affine_best_classes.png
+│       │   │   ├── sampled_max_distance
+│       │   │   │   ├── latent_left_sampled_max_distance.png
+│       │   │   │   ├── latent_right_sampled_max_distance.png
+│       │   │   │   ├── latents1_transformed_sampled_max_distance.png
+│       │   │   │   ├── mapping.pth.npz
+│       │   │   │   └── mapping_error_Affine_max_distance_.png
+│       │   │   └── sampled_worst_classes
+│       │   │       ├── latent_left_sampled_worst_classes.png
+│       │   │       ├── latent_right_sampled_worst_classes.png
+│       │   │       ├── latents1_transformed_sampled_worst_classes.png
+│       │   │       ├── mapping.pth.npz
+│       │   │       └── mapping_error_Affine_worst_classes.png
+│       │   ├── Affine_MNIST_SMLLAE_0.01_128_20_1_->_MNIST_SMLLAE_0.01_128_20_2_49
+│       │   │   ├── latent_left_sampled_equally.png
+│       │   │   ├── latent_right_sampled_equally.png
+│       │   │   ├── latents1_transformed_sampled_equally.png
+│       │   │   ├── mapping.pth.npz
+│       │   │   ├── mapping_error_Affine_fairsample_.png
+│       │   │   ├── sampled_best_classes
+│       │   │   │   ├── latent_left_sampled_best_classes.png
+│       │   │   │   ├── latent_right_sampled_best_classes.png
+│       │   │   │   ├── latents1_transformed_sampled_best_classes.png
+│       │   │   │   ├── mapping.pth.npz
+│       │   │   │   └── mapping_error_Affine_best_classes.png
+│       │   │   ├── sampled_max_distance
+│       │   │   │   ├── latent_left_sampled_max_distance.png
+│       │   │   │   ├── latent_right_sampled_max_distance.png
+│       │   │   │   ├── latents1_transformed_sampled_max_distance.png
+│       │   │   │   ├── mapping.pth.npz
+│       │   │   │   └── mapping_error_Affine_max_distance_.png
+│       │   │   └── sampled_worst_classes
+│       │   │       ├── latent_left_sampled_worst_classes.png
+│       │   │       ├── latent_right_sampled_worst_classes.png
+│       │   │       ├── latents1_transformed_sampled_worst_classes.png
+│       │   │       ├── mapping.pth.npz
+│       │   │       └── mapping_error_Affine_worst_classes.png

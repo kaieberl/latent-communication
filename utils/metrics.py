@@ -54,7 +54,7 @@ def visualize_image_error(image1, image2, show_fig=False):
         plot_difference_matrix(errors, title='Image Error', show_fig=show_fig)
     return errors
 
-def visualize_dataset_error(model1, model2, transformation, images):
+def visualize_dataset_error(model1, model2, mapping, images):
     """
     Visualizes the error between two sets of images in a dataset.
 
@@ -73,12 +73,10 @@ def visualize_dataset_error(model1, model2, transformation, images):
         image = torch.tensor(image).unsqueeze(0)  # Add batch dimension if necessary
         
         with torch.no_grad():
-            full_image = model2(image).detach().cpu().numpy().squeeze()
-            latent_left = model1(image).detach().cpu().numpy()
-            transformed_latent = transformation.transform(latent_left)
-            recomposed = model2.decode(torch.tensor(transformed_latent)).detach().cpu().numpy().squeeze()
+            latents1 = model1.encode(image)
+            recomposed = model2.decode(mapping.transform(latents1).float()).detach().numpy()
 
-        errors += np.abs(full_image - recomposed)
+        errors += np.abs(image - recomposed)
     
     # Normalize errors
     errors /= len(images)
