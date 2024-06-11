@@ -80,7 +80,7 @@ class VAE(BaseModel):
 
         return [mu, log_var]
 
-    def decode(self, z):
+    def decode_old(self, z):
         """
         Takes the latent space representation and decodes it to the original input
         """
@@ -106,8 +106,20 @@ class VAE(BaseModel):
         """
         mu, log_var = self.encode(x)
         z = self.reparameterize(mu, log_var)
-        x_reconst = self.decode(z)
+        x_reconst = self.decode_old(z)
         return x_reconst, mu, log_var
+    
+    def decode(self, z):
+        """
+        Decodes the latent space representation
+        """
+        mu = self.mu(z)
+        log_var = self.var(z)
+        new_z = self.reparameterize(mu, log_var)
+        result = self.decoder_input(new_z)
+        result = self.decoder(result)
+        result = self.final_layer(result)
+        return result
     
     def loss_function(self, x, x_reconst, mu, log_var):
         """
@@ -124,7 +136,7 @@ class VAE(BaseModel):
         with torch.no_grad():
             z = torch.randn(num_samples, self.distribution_dim)
             z = z.to(device)
-            z = self.decode(z)
+            z = self.decode_old(z)
         return z
 
     def get_latent_space(self, x):
