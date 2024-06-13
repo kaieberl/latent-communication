@@ -93,6 +93,17 @@ def sample_furthest_away_images(n_samples, images, labels, model, batch_size=128
     return sampled_images, sampled_labels, sampled_indices
 
 
+def sample_removing_outliers(n_samples, images, labels, model, batch_size=128, device='cpu', threshold=0.5):
+    model.eval()
+    reconstructed_images = model(images.to(device)).detach().cpu()
+    average_error = F.mse_loss(reconstructed_images, images).mean().item()
+    variance_error = F.mse_loss(reconstructed_images, images, reduction='none').mean(dim=(1, 2, 3)).numpy()
+
+    ## exclude outliers
+    indices_sampled = np.where(variance_error < threshold * average_error)[0]
+    images_sampled = images[indices_sampled]
+    labels_sampled = labels[indices_sampled]
+    return torch.stack(images_sampled), torch.tensor(labels_sampled), indices_sampled
 
 
 
