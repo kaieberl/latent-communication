@@ -16,6 +16,8 @@ import logging
 
 
 class PocketAutoencoder(nn.Module):
+    '''
+    this the autoencoder of Federico. It is small and has flexible hidden dimensions and number of channels.'''
     def __init__(self, hidden_dim = 10, n_input_channels = 1, input_size = 28, path = None):
 
         if path is not None:

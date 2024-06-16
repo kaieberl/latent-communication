@@ -8,6 +8,10 @@ import torch.nn.functional as F
 
 
 class LightningAutoencoder(BaseModel):
+
+    '''
+    This is the autoencoder that hey used for MNSIT dataset in the paper. For now it was scrapped because according tho Leo it is too big for the dataset.
+    '''
     def __init__(self):
         super().__init__()
         self.autoencoder = nn.Module()
