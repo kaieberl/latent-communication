@@ -1,8 +1,9 @@
 experiment_name: ResNetAE
+dataset: cifar10
 epochs: 50
 batch_size: 64
 base_dir: .
-seeds: [0, 1]
+seeds: [1, 2, 3]
 seed: 0
-path: ${base_dir}/models/checkpoints/${experiment_name}/${name}_mnist_seed${seed}_${epochs}.pth
+path: ${base_dir}/models/checkpoints/${experiment_name}/${name}_cifar10_seed${seed}_${epochs}.pth
 name: resnet_ae

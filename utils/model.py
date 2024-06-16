@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
 
 
-def load_model(model_name, model_path=None, *args, **kwargs):
+def load_model(model_name, model_path=None, in_channels=1, size=7, *args, **kwargs):
     """
     Load the model from the given path.
     """
@@ -23,10 +23,10 @@ def load_model(model_name, model_path=None, *args, **kwargs):
         model = AE().to(device)
     elif model_name == 'resnet_ae':
         from models.definitions.resnet_ae import ResnetAE
-        model = ResnetAE(1, 50).to(device)
+        model = ResnetAE(in_channels, 50, size).to(device)
     elif model_name == 'resnet_vae':
         from models.definitions.resnet_vae import ResnetVAE
-        model = ResnetVAE(50, 1).to(device)
+        model = ResnetVAE(50, in_channels).to(device)
     else:
         raise ValueError(f"Unknown model name: {model_name}")
 
