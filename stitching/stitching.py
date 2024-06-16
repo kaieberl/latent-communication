@@ -5,7 +5,7 @@ import torch
 from omegaconf import DictConfig
 import hydra
 
-from utils.dataloaders.dataloader_mnist_single import DataLoaderMNIST
+from utils.dataloaders.full_dataloaders import DataLoaderMNIST
 from utils.model import load_models, get_accuracy, get_transformations, get_reconstruction_error
 
 device = torch.device('cuda') if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'

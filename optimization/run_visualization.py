@@ -5,7 +5,7 @@ import torch
 from pathlib import Path
 
 from utils.visualization import visualize_mapping_error, visualize_latent_space_pca
-from utils.dataloaders.dataloader_mnist_single import DataLoaderMNIST
+from utils.dataloaders.full_dataloaders import DataLoaderMNIST
 from utils.model import load_models, get_transformations
 from stitching.stitching import load_mapping
 

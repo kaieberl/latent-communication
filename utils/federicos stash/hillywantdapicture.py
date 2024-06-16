@@ -16,8 +16,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
-from models.definitions.PocketAutoencoder import PocketAutoencoder
-from utils.dataloaders.dataloader_mnist_single import DataLoaderMNIST
+from models.definitions.smallae import PocketAutoencoder
+from utils.dataloaders.full_dataloaders import DataLoaderMNIST
 from utils.visualization import (
     visualize_mapping_error,
     visualize_latent_space_pca,
