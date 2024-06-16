@@ -5,10 +5,11 @@ import matplotlib.pyplot as plt
 device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
 
 
-def load_model(model_name, model_path=None, in_channels=1, size=7, *args, **kwargs):
+def load_model(model_name, model_path=None, in_channels=1, size=7, latent_size = 0, name_dataset = None, seed = 0, *args, **kwargs):
     """
     Load the model from the given path.
     """
+    model_name = model_name.lower()
     if model_name == 'vae':
         from models.definitions.vae import VAE
         model = VAE(in_dim=784, dims=[256, 128, 64, 32], distribution_dim=16).to(device)
@@ -27,6 +28,9 @@ def load_model(model_name, model_path=None, in_channels=1, size=7, *args, **kwar
     elif model_name == 'resnet_vae':
         from models.definitions.resnet_vae import ResnetVAE
         model = ResnetVAE(50, in_channels).to(device)
+    elif model_name == 'pcktae':
+        from models.definitions.smallae import PocketAutoencoder
+        model = PocketAutoencoder(path=model_path.split("/")[-1]).to(device)
     else:
         raise ValueError(f"Unknown model name: {model_name}")
 
@@ -45,6 +49,7 @@ def get_transformations(model_name):
     """
     Get the corresponding data transformations for the given model.
     """
+    model_name = model_name.lower()
     if model_name == 'vae':
         return [
             transforms.ToTensor(),
@@ -62,7 +67,7 @@ def get_transformations(model_name):
             transforms.Resize((224, 224)),
             transforms.Lambda(lambda x: x.repeat(3, 1, 1))
         ]
-    elif model_name in ['ae', 'resnet_ae', 'resnet_vae']:
+    elif model_name in ['ae', 'resnet_ae', 'resnet_vae', 'pcktae']:
         return [
             transforms.ToTensor(),
             transforms.Normalize((0.5,), (0.5,))

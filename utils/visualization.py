@@ -158,3 +158,106 @@ def visualize_results(cfg, labels, latents1, latents2):
                             f"{cfg.storage_path}/mapping_error_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}.png")
     print(f"MSE: {np.mean(errors):.4f}")
     plot_error_dist(errors, labels, f"{cfg.storage_path}/mapping_error_distribution_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}.png")
+
+
+def visualize_modified_latent_space_pca(
+    latents_trans,
+    latents_2,
+    labels,
+    fig_path=None,
+    anchors=None,
+    pca=None,
+    size=10,
+    bg_alpha=1,
+    alpha=1,
+    title="2D PCA of Latent Space",
+):
+    """
+    Visualizes the 2D latent space obtained from PCA.
+
+    Args:
+        latents_trans: A tensor of shape (N, dim) representing the first set of latent points.
+        latents_2: A tensor of shape (N, dim) representing the second set of latent points.
+        labels: A tensor of shape (N,) representing the labels for each latent point.
+        fig_path: Optional; Path to save the figure.
+        anchors: Optional; A tensor of shape (M, dim) representing anchor points in the latent space.
+        pca: Optional; A PCA object to use for transforming the latent space.
+        size: Optional; Size of the points in the plot.
+        bg_alpha: Optional; Alpha value for the background points.
+        alpha: Optional; Alpha value for the highlighted points.
+    """
+    # Convert lists to tensors if needed
+    if isinstance(latents_trans, list):
+        latents_trans = torch.tensor(latents_trans)
+    if isinstance(latents_2, list):
+        latents_2 = torch.tensor(latents_2)
+    labels = np.asarray(labels)
+
+    # Concatenate latent spaces
+    latents = torch.cat([latents_trans, latents_2], dim=0)
+    print(latents.shape)
+
+    if pca is None:
+        pca = PCA(n_components=2)
+        latents_2d = pca.fit_transform(latents)
+    else:
+        latents_2d = pca.transform(latents)
+
+    # Normalize latents
+    minimum = latents_2d.min(axis=0)
+    maximum = latents_2d.max(axis=0)
+    latents_2d -= minimum
+    latents_2d /= maximum
+
+    # Separate the two datasets
+    latents_trans_2d = latents_2d[: len(latents_trans)]
+    latents_2_2d = latents_2d[len(latents_trans) :]
+
+    # Create DataFrames for easy plotting
+    latent_df_trans = pd.DataFrame(latents_trans_2d, columns=["x", "y"])
+    latent_df_trans["target"] = labels
+
+    latent_df_2 = pd.DataFrame(latents_2_2d, columns=["x", "y"])
+    latent_df_2["target"] = labels
+
+    # Plot the 2D latent space
+    fig, ax = plt.subplots(figsize=(6, 6))
+    cmap = plt.get_cmap("tab10")
+    norm = plt.Normalize(
+        latent_df_trans["target"].min(), latent_df_trans["target"].max()
+    )
+
+    ax = plot_latent_space(
+        ax,
+        latent_df_trans,
+        targets=np.unique(labels),
+        size=size,
+        cmap=cmap,
+        norm=norm,
+        bg_alpha=bg_alpha,
+        alpha=alpha,
+        marker="2",
+    )
+    ax = plot_latent_space(
+        ax,
+        latent_df_2,
+        targets=np.unique(labels),
+        size=size,
+        cmap=cmap,
+        norm=norm,
+        bg_alpha=bg_alpha,
+        alpha=alpha,
+        marker="1",
+    )
+
+    if anchors is not None:
+        # plot anchors with star marker
+        anchors_2d = pca.transform(anchors.cpu().detach().numpy())
+        anchors_2d -= minimum
+        anchors_2d /= maximum
+        ax.scatter(anchors_2d[:, 0], anchors_2d[:, 1], marker="*", s=50, c="black")
+
+    plt.title(title)
+    if fig_path is not None:
+        plt.savefig(fig_path)
+    plt.show()

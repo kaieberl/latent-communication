@@ -82,5 +82,17 @@ def visualize_dataset_error(model1, model2, mapping, images):
     errors /= len(images)
     plot_difference_matrix(errors, title='Dataset Error', show_fig=True)
 
+def calculate_MSE_ssim_psnr(original, reconstructed, data_range=1.0):
+    #TODO: add descritpion and function to consider when the input channels are more than one
+    original_np = original.cpu().numpy().squeeze()
+    mse_value = np.mean((original_np - reconstructed) ** 2)
+    if original_np.shape != reconstructed.shape:
+        raise ValueError(f"Shape mismatch: original shape {original_np.shape}, reconstructed shape {reconstructed.shape}")
+
+    ssim_value = ssim(original_np, reconstructed, data_range=data_range)
+    psnr_value = psnr(original_np, reconstructed, data_range=data_range)
+    return mse_value, ssim_value, psnr_value
+
+
 # Ensure you have imported necessary libraries like torch and your model definitions.
 
