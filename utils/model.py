@@ -12,34 +12,34 @@ def load_model(model_name, model_path=None, in_channels=1, size=7, latent_size =
     model_name = model_name.lower()
     if model_name == 'vae':
         from models.definitions.vae import VAE
-        model = VAE(in_dim=784, dims=[256, 128, 64, 32], distribution_dim=16).to(device)
+        model = VAE(in_dim=784, dims=[256, 128, 64, 32], distribution_dim=16)
     elif model_name == 'resnet':
         from models.definitions.resnet import ResNet
-        model = ResNet().to(device)
+        model = ResNet()
     elif model_name == 'vit':
         from models.definitions.vit import ViT
-        model = ViT().to(device)
+        model = ViT()
     elif model_name == 'ae':
         from models.definitions.ae import LightningAutoencoder as AE
-        model = AE().to(device)
+        model = AE()
     elif model_name == 'resnet_ae':
         from models.definitions.resnet_ae import ResnetAE
-        model = ResnetAE(in_channels, 50, size).to(device)
+        model = ResnetAE(in_channels, 50, size)
     elif model_name == 'resnet_vae':
         from models.definitions.resnet_vae import ResnetVAE
-        model = ResnetVAE(50, in_channels).to(device)
+        model = ResnetVAE(50, in_channels)
     elif model_name == 'pcktae':
         from models.definitions.smallae import PocketAutoencoder
-        model = PocketAutoencoder(path=model_path.split("/")[-1]).to(device)
+        model = PocketAutoencoder(path=model_path.split("/")[-1])
     elif model_name == "verysmall-ae":
         from models.definitions.ae_latentdim10 import VerySmallAutoencoder
-        model = VerySmallAutoencoder().to(device)
+        model = VerySmallAutoencoder()
     else:
         raise ValueError(f"Unknown model name: {model_name}")
 
     if model_path is not None:
         model.load_state_dict(torch.load(model_path, map_location=device))
-    return model.to(device)
+    return model
 
 
 def load_models(cfg):
