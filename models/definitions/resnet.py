@@ -4,7 +4,10 @@ from torchvision.models import ResNet18_Weights
 
 from models.definitions.base_model import BaseModel
 
-
+"""
+This file defines a resnet model for classifcation of MNIST data set 
+with latent space dimension 512 and output dimension 10
+"""
 class ResNet(BaseModel):
     def __init__(self, pretrained=True):
         super(ResNet, self).__init__()
