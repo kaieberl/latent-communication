@@ -31,6 +31,9 @@ def load_model(model_name, model_path=None, in_channels=1, size=7, latent_size =
     elif model_name == 'pcktae':
         from models.definitions.smallae import PocketAutoencoder
         model = PocketAutoencoder(path=model_path.split("/")[-1]).to(device)
+    elif model_name == "verysmall-ae":
+        from models.definitions.ae_latentdim10 import VerySmallAutoencoder
+        model = VerySmallAutoencoder().to(device)
     else:
         raise ValueError(f"Unknown model name: {model_name}")
 
@@ -67,7 +70,7 @@ def get_transformations(model_name):
             transforms.Resize((224, 224)),
             transforms.Lambda(lambda x: x.repeat(3, 1, 1))
         ]
-    elif model_name in ['ae', 'resnet_ae', 'resnet_vae', 'pcktae']:
+    elif model_name in ['ae', 'resnet_ae', 'resnet_vae', 'pcktae','verysmall-ae']:
         return [
             transforms.ToTensor(),
             transforms.Normalize((0.5,), (0.5,))
