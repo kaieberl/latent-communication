@@ -148,14 +148,22 @@ def sample_furthest_away_images(n_samples, images, labels, model, batch_size=128
 
 def sample_removing_outliers(n_samples, images, labels, model, batch_size=128, device='cpu', threshold=0.5):
     model.eval()
-    reconstructed_images = model(images.to(device)).detach().cpu()
-    average_error = F.mse_loss(reconstructed_images, images).mean().item()
-    variance_error = F.mse_loss(reconstructed_images, images, reduction='none').mean(dim=(1, 2, 3)).numpy()
-
+    errors = []
+    for image in images:
+        image = image.to(device)
+        x = model(image.unsqueeze(0))
+        error = F.mse_loss(x, image.unsqueeze(0)).item()
+        errors.append(error)
+    mean_error = np.mean(errors)
+    images = images.detach().cpu().numpy()
     ## exclude outliers
-    indices_sampled = np.where(variance_error < threshold * average_error)[0]
-    images_sampled = images[indices_sampled]
-    labels_sampled = labels[indices_sampled]
+    filtered_data = [(image, label) for n, (image, label) in enumerate(zip(images, labels)) if errors[n] < threshold * mean_error]
+    filterer_outliers = [image for image, label in filtered_data]
+    filterer_outliers_labels = [label for image, label in filtered_data]
+    if len(filterer_outliers) < n_samples:
+        logging.info(f"Number of images without outliers is less than n_samples.")
+        n_samples = len(filterer_outliers)
+    images_sampled, labels_sampled = sample_equally_per_class_images(n_samples, filterer_outliers, filterer_outliers_labels, seed=0)
     return images_sampled, labels_sampled
 
 

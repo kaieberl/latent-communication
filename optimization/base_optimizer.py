@@ -20,6 +20,7 @@ class BaseOptimizer:
         self.z2 = z2
         self.latent_dim1 = z1.shape[1]
         self.latent_dim2 = z2.shape[1]
+        self.do_print = True
 
     @abstractmethod
     def define_loss(self):
@@ -32,7 +33,8 @@ class BaseOptimizer:
         """
         Defines the optimization problem.
         """
-        print("Defining the problem")
+        if self.do_print:
+            print("Defining the problem")
         loss = self.define_loss()
         objective = cp.Minimize(loss)
         self.problem = cp.Problem(objective)
@@ -43,7 +45,8 @@ class BaseOptimizer:
         """
         if self.problem is None:
             self.define_problem()
-        print("Solving the problem")
+        if self.do_print:
+            print("Solving the problem")
         self.problem.solve()
 
     @abstractmethod
