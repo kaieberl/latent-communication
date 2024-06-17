@@ -96,6 +96,7 @@ class VAE(BaseModel):
         self.encoder = Encoder(in_dim, latent_dim)
         self.distribution = Distribution(latent_dim)
         self.decoder = Decoder(in_dim, latent_dim)
+        self.return_var = False
 
     def encode(self, x):
         """
@@ -132,7 +133,9 @@ class VAE(BaseModel):
         mu, log_var = self.encode(x)
         z = self.reparameterize(mu, log_var)
         x_reconst = self.decode(z)
-        return x_reconst, mu, log_var
+        if self.return_var:
+            return x_reconst, mu, log_var
+        return x_reconst
 
     def loss_function(self, x, x_reconst, mu, log_var):
         """
