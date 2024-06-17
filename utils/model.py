@@ -12,7 +12,7 @@ def load_model(model_name, model_path=None, in_channels=1, size=7, latent_size =
     model_name = model_name.lower()
     if model_name == 'vae':
         from models.definitions.vae import VAE
-        model = VAE(in_dim=784, dims=[256, 128, 64, 32], distribution_dim=16)
+        model = VAE(in_dim=784, latent_dim = latent_size)
     elif model_name == 'resnet':
         from models.definitions.resnet import ResNet
         model = ResNet()
