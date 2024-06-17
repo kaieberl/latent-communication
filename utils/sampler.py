@@ -154,10 +154,7 @@ def sample_removing_outliers(n_samples, images, labels, model, batch_size=128, d
     for image in images:
 
         image = image.to(device)
-        #try:
-            
-           # x = model(image.unsqueeze(0))
-        #except:
+
         x = model(image.unsqueeze(0))
             
 
