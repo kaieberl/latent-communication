@@ -11,7 +11,7 @@ from optimization.mlp import MLP
 
 
 class AffineFitting(BaseOptimizer):
-    def __init__(self, z1, z2, lamda):
+    def __init__(self, z1, z2, lamda, do_print=True):
         """
         Initializes the AffineFitting class.
 
@@ -25,6 +25,7 @@ class AffineFitting(BaseOptimizer):
         self.A_aff = cp.Variable((self.latent_dim2, self.latent_dim1))
         self.b_aff = cp.Variable(self.latent_dim2)
         self.problem = None
+        self.do_print = do_print
 
     def define_loss(self):
         """
@@ -64,7 +65,9 @@ class AffineFitting(BaseOptimizer):
         b = self.b_aff.value
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         np.savez(path, A=A, b=b)
-        return print("Results saved at ", path)
+        if self.do_print:
+            print("Results saved at ", path)
+        return path
 
     def transform(self, z1):
         if isinstance(z1, torch.Tensor):
@@ -93,7 +96,7 @@ class AffineFitting(BaseOptimizer):
 
 
 class LinearFitting(BaseOptimizer):
-    def __init__(self, z1, z2, lamda):
+    def __init__(self, z1, z2, lamda, do_print=True):
         """
         Initializes the LinearFitting class.
 
@@ -106,6 +109,7 @@ class LinearFitting(BaseOptimizer):
         self.lamda = lamda
         self.A = cp.Variable((self.latent_dim2, self.latent_dim1))
         self.problem = None
+        self.do_print = do_print
 
     def define_loss(self):
         """
@@ -140,7 +144,9 @@ class LinearFitting(BaseOptimizer):
         A = self.A.value
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         np.save(path, A)
-        return print("Results saved at ", path)
+        if self.do_print:
+            print("Results saved at ", path)
+        return path
 
     def transform(self, z1):
         if isinstance(z1, torch.Tensor):
@@ -166,7 +172,7 @@ class LinearFitting(BaseOptimizer):
 
 
 class NeuralNetworkFitting(BaseOptimizer):
-    def __init__(self, z1, z2, hidden_dim, lamda, learning_rate=0.01, epochs=100):
+    def __init__(self, z1, z2, hidden_dim, lamda, learning_rate=0.01, epochs=100, do_print=True):
         """
         Defines a neural network mapping between two latent spaces. Uses the MLP model.
 
@@ -184,6 +190,7 @@ class NeuralNetworkFitting(BaseOptimizer):
 
         self.z1 = torch.tensor(z1, dtype=torch.float32)
         self.z2 = torch.tensor(z2, dtype=torch.float32)
+        self.do_print = do_print
 
     def define_loss(self):
         """

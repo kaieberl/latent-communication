@@ -83,16 +83,16 @@ def get_latents(cfg, test=False):
     return latents, labels
 
 
-def create_mapping(cfg, latents1, latents2):
+def create_mapping(cfg, latents1, latents2, do_print=True):
     if cfg.mapping == 'Linear':
         from optimization.optimizer import LinearFitting
-        mapping = LinearFitting(latents1, latents2, lamda=cfg.lamda)
+        mapping = LinearFitting(latents1, latents2, lamda=cfg.lamda, do_print=do_print)
     elif cfg.mapping == 'Affine':
         from optimization.optimizer import AffineFitting
-        mapping = AffineFitting(latents1, latents2, lamda=cfg.lamda)
+        mapping = AffineFitting(latents1, latents2, lamda=cfg.lamda, do_print=do_print)
     elif cfg.mapping == 'NeuralNetwork':
         from optimization.optimizer import NeuralNetworkFitting
-        mapping = NeuralNetworkFitting(latents1, latents2, hidden_dim=cfg.hidden_size, lamda=cfg.lamda, learning_rate=cfg.learning_rate, epochs=cfg.epochs)
+        mapping = NeuralNetworkFitting(latents1, latents2, hidden_dim=cfg.hidden_size, lamda=cfg.lamda, learning_rate=cfg.learning_rate, epochs=cfg.epochs, do_print=do_print)
     else:
         raise ValueError("Invalid experiment name")
     return mapping

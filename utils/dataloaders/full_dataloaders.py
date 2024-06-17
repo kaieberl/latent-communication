@@ -30,7 +30,7 @@ class DataLoaderMNIST:
         self.train_loader = DataLoader(self.train_subset, batch_size=batch_size, shuffle=shuffle_train_flag, num_workers=0)
         self.test_loader = DataLoader(self.test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
 
-        self.input_size = self.train_dataset[0][0].shape[1]
+        #self.input_size = self.train_dataset[0][0].shape[1]
 
 
     def get_train_loader(self):
@@ -82,8 +82,8 @@ class DataLoaderFashionMNIST:
         transform = transforms.Compose(transformation)
 
         dataset_class = datasets.FashionMNIST
-        self.train_dataset = dataset_class(root=base_path / 'data', train=True, download=False, transform=transform)
-        self.test_dataset = dataset_class(root=base_path / 'data', train=False, download=False, transform=transform)
+        self.train_dataset = dataset_class(root=base_path / 'data', train=True, download=True, transform=transform)
+        self.test_dataset = dataset_class(root=base_path / 'data', train=False, download=True, transform=transform)
 
         np.random.seed(self.seed)
 
@@ -96,7 +96,7 @@ class DataLoaderFashionMNIST:
         self.train_loader = DataLoader(self.train_subset, batch_size=batch_size, shuffle=shuffle_train_flag, num_workers=0)
         self.test_loader = DataLoader(self.test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
 
-        self.input_size = self.train_dataset[0][0].shape[1]
+        #self.input_size = self.train_dataset[0][0].shape[1]
 
 
     def get_train_loader(self):
