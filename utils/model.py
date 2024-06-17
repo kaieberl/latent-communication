@@ -59,7 +59,7 @@ def get_transformations(model_name):
     Get the corresponding data transformations for the given model.
     """
     model_name = model_name.lower()
-    if model_name == 'VAE':
+    if model_name == 'vae':
         return [
             transforms.ToTensor(),
             transforms.Normalize((0.5,), (0.5,)),
