@@ -433,6 +433,7 @@ FMNIST_VAE_8_1.pth,FMNIST_VAE_8_2.pth,results/transformations/mapping_files/VAE/
 FMNIST_VAE_8_1.pth,FMNIST_VAE_8_2.pth,results/transformations/mapping_files/VAE/FMNIST_VAE_8_1>FMNIST_VAE_8_1>Linear_50_0.01_outliers
 FMNIST_VAE_8_1.pth,FMNIST_VAE_8_2.pth,results/transformations/mapping_files/VAE/FMNIST_VAE_8_1>FMNIST_VAE_8_1>Linear_50_0.01_worst_classes
 FMNIST_VAE_8_1.pth,FMNIST_VAE_8_2.pth,results/transformations/mapping_files/VAE/FMNIST_VAE_8_1>FMNIST_VAE_8_1>Linear_50_0.01_convex_hull
+<<<<<<< HEAD
 FMNIST_VAE_16_2.pth,FMNIST_VAE_16_3.pth,results/transformations/mapping_files/VAE/FMNIST_VAE_16_2>FMNIST_VAE_16_2>Linear_10_0_equally
 FMNIST_VAE_16_2.pth,FMNIST_VAE_16_3.pth,results/transformations/mapping_files/VAE/FMNIST_VAE_16_2>FMNIST_VAE_16_2>Linear_10_0_outliers
 FMNIST_VAE_16_2.pth,FMNIST_VAE_16_3.pth,results/transformations/mapping_files/VAE/FMNIST_VAE_16_2>FMNIST_VAE_16_2>Linear_10_0_worst_classes
@@ -866,3 +867,5 @@ FMNIST_VAE_64_2.pth,FMNIST_VAE_64_3.pth,results/transformations/mapping_files/VA
 FMNIST_VAE_64_2.pth,FMNIST_VAE_64_3.pth,results/transformations/mapping_files/VAE/FMNIST_VAE_64_2>FMNIST_VAE_64_2>Linear_50_0.01_worst_classes
 FMNIST_VAE_64_2.pth,FMNIST_VAE_64_3.pth,results/transformations/mapping_files/VAE/FMNIST_VAE_64_2>FMNIST_VAE_64_2>Linear_50_0.01_convex_hull
 >>>>>>> 015d370 (Result 64)
+=======
+>>>>>>> parent of 428924a8 (Run for 16,32)
