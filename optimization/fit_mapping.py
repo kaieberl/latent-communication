@@ -3,12 +3,11 @@ from pathlib import Path
 import torch
 from omegaconf import DictConfig
 import hydra
-from torch.utils.data import DataLoader
-from torchvision.datasets import MNIST
+from torch.utils.data import DataLoader, SubsetRandomSampler
+from torchvision.datasets import MNIST, CIFAR10, FashionMNIST
 from torchvision.transforms import transforms
 
 from utils.model import load_model, get_transformations
-from utils.sampler import simple_sampler
 from utils.visualization import visualize_results
 
 device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
@@ -27,18 +26,40 @@ def get_latents(cfg, test=False):
         torch.Tensor: Labels
     """
     latents = {}
+    if cfg.dataset == 'mnist':
+        in_channels = 1
+        size = 7
+    elif cfg.dataset == 'cifar10':
+        in_channels = 3
+        size = 8
+    elif cfg.dataset == 'fmnist':
+        in_channels = 1
+        size = 7
+    else:
+        raise ValueError("Invalid dataset")
+
     if not test:
         torch.manual_seed(0)
-        indices = torch.randperm(60000)[:cfg.num_samples]
+        indices = torch.randperm(50000)[:cfg.num_samples]
         for model_name in ['model1', 'model2']:
             if 'train_latents_path' in cfg[model_name]:
                 labels = torch.load(cfg.train_label_path, map_location=device)
                 z = torch.load(cfg[model_name].train_latents_path, map_location=device)
                 latents[model_name] = z[indices]
             else:
-                model = load_model(cfg[model_name].name, cfg[model_name].path)
+                model = load_model(cfg[model_name].name, cfg[model_name].path, in_channels, size)
                 transformations = get_transformations(cfg[model_name].name)
-                latents[model_name], labels = simple_sampler(indices, model, transformations, device, seed=cfg[model_name].seed)
+                transformations = transforms.Compose(transformations)
+                if cfg.dataset == 'mnist':
+                    dataset = MNIST(root=cfg.base_dir / 'data', train=True, transform=transformations, download=True)
+                elif cfg.dataset == 'fmnist':
+                    dataset = FashionMNIST(root=cfg.base_dir / 'data', train=True, transform=transformations, download=True)
+                elif cfg.dataset == 'cifar10':
+                    dataset = CIFAR10(root=cfg.base_dir / 'data', train=True, transform=transformations, download=True)
+                else:
+                    raise ValueError("Invalid dataset")
+                dataloader = DataLoader(dataset, batch_size=cfg.num_samples, sampler=SubsetRandomSampler(indices))
+                latents[model_name], labels = model.get_latent_space_from_dataloader(dataloader)
     else:
         for model_name in ['model1', 'model2']:
             if 'test_latents_path' in cfg[model_name]:
@@ -46,10 +67,17 @@ def get_latents(cfg, test=False):
                 z = torch.load(cfg[model_name].test_latents_path, map_location=device)
                 latents[model_name] = z
             else:
-                model = load_model(cfg[model_name].name, cfg[model_name].path)
+                model = load_model(cfg[model_name].name, cfg[model_name].path, in_channels, size)
                 transformations = get_transformations(cfg[model_name].name)
                 transformations = transforms.Compose(transformations)
-                dataset = MNIST(root=cfg.base_dir / 'data', train=False, transform=transformations, download=True)
+                if cfg.dataset == 'mnist':
+                    dataset = MNIST(root=cfg.base_dir / 'data', train=False, transform=transformations, download=True)
+                elif cfg.dataset == 'fmnist':
+                    dataset = FashionMNIST(root=cfg.base_dir / 'data', train=False, transform=transformations, download=True)
+                elif cfg.dataset == 'cifar10':
+                    dataset = CIFAR10(root=cfg.base_dir / 'data', train=False, transform=transformations, download=True)
+                else:
+                    raise ValueError("Invalid dataset")
                 dataloader = DataLoader(dataset, batch_size=128, shuffle=False)
                 latents[model_name], labels = model.get_latent_space_from_dataloader(dataloader)
     return latents, labels

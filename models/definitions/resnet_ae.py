@@ -107,7 +107,7 @@ class ResnetAE(LightningBaseModel):
         return self.decoder(z)
 
     def get_latent_space(self, x):
-        return self.encode(x)
+        return self.encode(x).detach()
 
     def get_latent_space_from_dataloader(self, dataloader):
         latents = []

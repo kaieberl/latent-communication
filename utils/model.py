@@ -43,8 +43,14 @@ def load_model(model_name, model_path=None, in_channels=1, size=7, latent_size =
 
 
 def load_models(cfg):
-    model1 = load_model(cfg.model1.name, cfg.model1.path)
-    model2 = load_model(cfg.model2.name, cfg.model2.path)
+    if cfg.dataset == 'mnist':
+        in_channels = 1
+        size = 7
+    elif cfg.dataset == 'cifar10':
+        in_channels = 3
+        size = 8
+    model1 = load_model(cfg.model1.name, cfg.model1.path, in_channels, size)
+    model2 = load_model(cfg.model2.name, cfg.model2.path, in_channels, size)
     return model1, model2
 
 
