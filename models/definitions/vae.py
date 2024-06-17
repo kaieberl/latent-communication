@@ -1,71 +1,101 @@
-from typing import List
 
-import torch.nn as nn
 import torch
-from tqdm import tqdm
-# get working directory
-# import os
-# Change directory
-#os.chdir('/Users/mariotuci/Desktop/Google-Drive/Master/SoSe-24/Project Studies/Project/Code/latent-communication')
+import torch.nn as nn
 from models.definitions.base_model import BaseModel
 
-device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
+class Encoder(nn.Module):
+    """Encoder network that encodes the input space into a latent space."""
+    def __init__(self, in_dim, latent_dim):
+        """Initialize an Encoder module.
+        
+        Args:
+            in_dim: int, Number of input dimensions.
+            latent_dim: int, Dimensionality of the latent space.
+        """
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(in_dim, 512),
+            nn.ReLU(),
+            nn.Linear(512, 256),  # corrected from 256
+            nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, latent_dim)
+        )
 
+    def forward(self, x):
+        """Forward pass through the encoder.
+        
+        Args:
+            x: torch.Tensor, Input tensor.
+        Returns:
+            torch.Tensor, Encoded representation.
+        """
+        return self.net(x)
+
+class Distribution(nn.Module):
+    """Distribution network that predicts the mean and variance of the latent space."""
+    def __init__(self, latent_dim):
+        """Initialize a Distribution module.
+        
+        Args:
+            latent_dim: int, Dimensionality of the latent space.
+        """
+        super().__init__()
+        self.mu = nn.Linear(latent_dim, latent_dim)
+        self.logvar = nn.Linear(latent_dim, latent_dim)
+
+    def forward(self, x):
+        """Forward pass through the distribution network.
+        
+        Args:
+            x: torch.Tensor, Input tensor.
+        Returns:
+            torch.Tensor, Mean of the latent space.
+            torch.Tensor, Log variance of the latent space.
+        """
+        return self.mu(x), self.logvar(x)
+
+class Decoder(nn.Module):
+    """Decoder network that decodes the latent space into the input space."""
+    def __init__(self, out_dim, latent_dim):
+        """Initialize a Decoder module.
+        
+        Args:
+            out_dim: int, Number of output dimensions.
+            latent_dim: int, Dimensionality of the latent space.
+        """
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(latent_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, 128),
+            nn.ReLU(),
+            nn.Linear(128, 256),
+            nn.ReLU(),
+            nn.Linear(256, 512),
+            nn.ReLU(),
+            nn.Linear(512, out_dim)
+        )
+
+    def forward(self, x):
+        """Forward pass through the decoder.
+        
+        Args:
+            x: torch.Tensor, Input tensor.
+        Returns:
+            torch.Tensor, Decoded representation.
+        """
+        return self.net(x)
 
 class VAE(BaseModel):
-
-    def __init__(self,in_dim: int,  dims: List[int], distribution_dim: int):
+    def __init__(self, in_dim, latent_dim):
         super(VAE, self).__init__()
-
-        self.in_dim = in_dim
-        self.distribution_dim = distribution_dim
-        self.dims = dims
-        modules = []
-        in_dim_layer = in_dim
-        
-        if dims is None:
-            dims = [128, 256, 512]
-
-        self.hidden_dim = dims[-1]
-
-        for h_dim in dims:
-            # Create Layers 
-            modules.append(
-                nn.Sequential(
-                # Fully connected layer
-                nn.Linear(in_dim_layer, h_dim),
-                # Activation Function 
-                nn.ReLU())
-                )
-                
-            in_dim_layer = h_dim 
-        
-        # Variance and Mean for the latent space distribution
-        self.mu = nn.Linear(dims[-1], distribution_dim)
-        self.var = nn.Linear(dims[-1], distribution_dim)
-
-        # Build the encoder
-        self.encoder = nn.Sequential(*modules)
-
-        # Build Decoder
-        modules = []
-        self.decoder_input = nn.Linear(distribution_dim, dims[-1])
-
-        for i in range(len(dims) - 1, 0, -1):
-            modules.append(
-                nn.Sequential(
-                    nn.Linear(dims[i], dims[i - 1]),
-                    nn.ReLU()
-                )
-            )
-  
-        self.decoder = nn.Sequential(*modules)
-
-        # Final Layer 
-        self.final_layer = nn.Sequential(
-            nn.Linear(dims[0], in_dim),
-            nn.Tanh()
-        )
+        self.encoder = Encoder(in_dim, latent_dim)
+        self.distribution = Distribution(latent_dim)
+        self.decoder = Decoder(in_dim, latent_dim)
 
     def encode(self, x):
         """
@@ -73,31 +103,26 @@ class VAE(BaseModel):
         and returns the mean and log variance of the encoded input.
         """
         result = self.encoder(x)
-        result = torch.flatten(result, start_dim=1)
+        mu, log_var = self.distribution(result)
+        return mu, log_var
 
-        mu = self.mu(result)
-        log_var = self.var(result)
 
-        return [mu, log_var]
-
-    def decode_old(self, z):
+  
+    def decode(self, z):
         """
-        Takes the latent space representation and decodes it to the original input
+        Decodes the latent space representation
         """
 
-        result = self.decoder_input(z)
-        result = self.decoder(result)
-        result = self.final_layer(result)
-        return result
+        return self.decoder(z)
 
     def reparameterize(self, mu, logvar):
         """
         Reparameterization trick to sample from N(mu, var) from
         N(0,1).
         """
-        std = torch.exp(0.5*logvar)
+        std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
-        return mu + eps*std
+        return mu + eps * std
 
     def forward(self, x):
         """
@@ -106,44 +131,29 @@ class VAE(BaseModel):
         """
         mu, log_var = self.encode(x)
         z = self.reparameterize(mu, log_var)
-        x_reconst = self.decode_old(z)
+        x_reconst = self.decode(z)
         return x_reconst, mu, log_var
-    
-    def decode(self, z):
-        """
-        Decodes the latent space representation
-        """
-        mu = self.mu(z)
-        log_var = self.var(z)
-        new_z = self.reparameterize(mu, log_var)
-        result = self.decoder_input(new_z)
-        result = self.decoder(result)
-        result = self.final_layer(result)
-        return result
-    
+
     def loss_function(self, x, x_reconst, mu, log_var):
         """
         Returns the loss function for the VAE.
         """
         reconst_loss = nn.functional.mse_loss(x_reconst, x, reduction='sum')
-        kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+        kl_div = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
         return reconst_loss + kl_div
-    
-    def sample(self, num_samples):
+
+    def reconstruction_loss(self, x, x_reconst):
         """
-        Samples from the latent space and returns the decoded output.
+        Returns the reconstruction loss of the VAE.
         """
-        with torch.no_grad():
-            z = torch.randn(num_samples, self.distribution_dim)
-            z = z.to(device)
-            z = self.decode_old(z)
-        return z
+        return nn.functional.mse_loss(x_reconst, x, reduction='sum')
+
 
     def get_latent_space(self, x):
         """
-        Returns the latent space representation of the input. Last Layer of the Encoder before the mean and variance.
+        Returns the latent space representation of the input.
         """
-        result = self.encoder(x)
-        result = torch.flatten(result, start_dim=1)
-        return result
+        mu, log_var = self.encode(x)
+        return self.reparameterize(mu, log_var)
+
     
