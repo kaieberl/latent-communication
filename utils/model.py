@@ -78,8 +78,7 @@ def get_transformations(model_name):
         ]
     elif model_name in ['ae', 'resnet_ae', 'resnet_vae', 'pcktae','verysmall-ae']:
         return [
-            transforms.ToTensor(),
-            transforms.Normalize((0.5,), (0.5,))
+            transforms.ToTensor()
         ]
     else:
         raise ValueError(f"Unknown model name: {model_name}")
