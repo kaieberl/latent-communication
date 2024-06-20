@@ -96,7 +96,7 @@ class VAE(BaseModel):
         self.encoder = Encoder(in_dim, latent_dim)
         self.distribution = Distribution(latent_dim)
         self.decoder = Decoder(in_dim, latent_dim)
-        self.return_var = True
+        self.return_var = False
 
     def encode(self, x):
         """
