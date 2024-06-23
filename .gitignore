@@ -5,3 +5,5 @@
 **/.hydra/
 /Latent_Communication.egg-info
 /dump
+results.csv
+results_top.csv
