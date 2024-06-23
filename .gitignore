@@ -8,3 +8,5 @@
 results.csv
 results_top.csv
 **/.vscode/
+error_distribution.csv
+results_class.csv
