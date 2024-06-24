@@ -1,0 +1,6 @@
+outs:
+- md5: c3d8830863670553a387d6c6691245bd.dir
+  size: 32625198
+  nfiles: 6
+  hash: md5
+  path: VerySmall-AE

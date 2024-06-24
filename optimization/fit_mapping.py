@@ -1,8 +1,13 @@
+"""Invoke with:
+    python optimization/fit_mapping.py --config-name config_map -m model1.seed=1,2,3 model2.seed=1,2,3 model1.name=vae model2.name=vae model1.latent_size=10,30,50 model2.latent_size=10,30,50
+"""
+
 from pathlib import Path
 
 import torch
 from omegaconf import DictConfig
 import hydra
+import hydra.core.global_hydra
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from torchvision.datasets import MNIST, CIFAR10, FashionMNIST
 from torchvision.transforms import transforms
@@ -11,6 +16,7 @@ from utils.model import load_model, get_transformations
 from utils.visualization import visualize_results
 
 device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
+hydra.core.global_hydra.GlobalHydra.instance().clear()
 
 
 def get_latents(cfg, test=False):
@@ -47,7 +53,7 @@ def get_latents(cfg, test=False):
                 z = torch.load(cfg[model_name].train_latents_path, map_location=device)
                 latents[model_name] = z[indices]
             else:
-                model = load_model(cfg[model_name].name, cfg[model_name].path, in_channels, size)
+                model = load_model(cfg[model_name].name, cfg[model_name].path, in_channels, size, cfg[model_name].latent_size)
                 transformations = get_transformations(cfg[model_name].name)
                 transformations = transforms.Compose(transformations)
                 if cfg.dataset == 'mnist':
@@ -67,7 +73,7 @@ def get_latents(cfg, test=False):
                 z = torch.load(cfg[model_name].test_latents_path, map_location=device)
                 latents[model_name] = z
             else:
-                model = load_model(cfg[model_name].name, cfg[model_name].path, in_channels, size)
+                model = load_model(cfg[model_name].name, cfg[model_name].path, in_channels, size, cfg[model_name].latent_size)
                 transformations = get_transformations(cfg[model_name].name)
                 transformations = transforms.Compose(transformations)
                 if cfg.dataset == 'mnist':
@@ -100,17 +106,23 @@ def create_mapping(cfg, latents1, latents2, do_print=True):
 
 @hydra.main(version_base="1.1", config_path="../config")
 def main(cfg : DictConfig) -> None:
+    # check if models are equal
+    if cfg.model1.name == cfg.model2.name and cfg.model1.seed == cfg.model2.seed:
+        return
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
+    cfg.model1.path = cfg.base_dir / "models/checkpoints" / f"{cfg.model1.name.upper()}/{cfg.dataset.upper()}/{cfg.dataset.upper()}_{cfg.model1.name.upper()}_{cfg.model1.latent_size}_{cfg.model1.seed}.pth"
+    cfg.model2.path = cfg.base_dir / "models/checkpoints" / f"{cfg.model2.name.upper()}/{cfg.dataset.upper()}/{cfg.dataset.upper()}_{cfg.model2.name.upper()}_{cfg.model2.latent_size}_{cfg.model2.seed}.pth"
     latents1, latents2 = get_latents(cfg)[0].values()
 
     mapping = create_mapping(cfg, latents1, latents2)
     mapping.fit()
-    storage_path = Path(cfg.storage_path) / f"{cfg.mapping}_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}_{cfg.num_samples}"
+    storage_path = cfg.base_dir / "results/transformations/mapping_files" / f"{cfg.dataset.upper()}_{cfg.model1.name.upper()}_{cfg.model1.seed}>{cfg.dataset.upper()}_{cfg.model2.name.upper()}_{cfg.model2.seed}>{cfg.mapping}_{cfg.num_samples}_{cfg.lamda}_{'equally'}"
     mapping.save_results(storage_path)
 
     latents, labels = get_latents(cfg, test=True)
     latents1, latents2 = latents.values()
     latents1_trafo = mapping.transform(latents1)
+    cfg.storage_path = cfg.base_dir / "results/transformations/figures" / cfg.model1.name.upper()
     visualize_results(cfg, labels, latents2, latents1_trafo)
 
 

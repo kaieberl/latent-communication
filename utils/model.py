@@ -1,11 +1,11 @@
 import torch
 import torchvision.transforms as transforms
-import matplotlib.pyplot as plt
 
-device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
+device = torch.device('cuda') if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
 
 
-def load_model(model_name, model_path=None, in_channels=1, size=7, latent_size = 0, name_dataset = None, seed = 0, *args, **kwargs):
+def load_model(model_name, model_path=None, in_channels=1, size=7, latent_size=8, name_dataset=None, seed=0, *args,
+               **kwargs):
     """
     Load the model from the given path.
     """
@@ -30,7 +30,7 @@ def load_model(model_name, model_path=None, in_channels=1, size=7, latent_size =
         model = ResnetVAE(50, in_channels)
     elif model_name == 'pcktae':
         from models.definitions.PCKTAE import PocketAutoencoder
-        model = PocketAutoencoder(path=model_path.split("/")[-1])
+        model = PocketAutoencoder()
     elif model_name == "verysmall-ae":
         from models.definitions.ae_latentdim10 import VerySmallAutoencoder
         model = VerySmallAutoencoder()
@@ -76,7 +76,7 @@ def get_transformations(model_name):
             transforms.Resize((224, 224)),
             transforms.Lambda(lambda x: x.repeat(3, 1, 1))
         ]
-    elif model_name in ['ae', 'resnet_ae', 'resnet_vae', 'pcktae','verysmall-ae']:
+    elif model_name in ['ae', 'resnet_ae', 'resnet_vae', 'pcktae', 'verysmall-ae']:
         return [
             transforms.ToTensor()
         ]

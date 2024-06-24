@@ -94,13 +94,13 @@ class BaseModel(nn.Module, ABC):
         total_samples = len(dataloader.dataset)
         latent_dim = self.hidden_dim
         latents = torch.zeros((total_samples, latent_dim), device=self.device)
-        labels = torch.zeros(total_samples, dtype=torch.long, device=self.device)
+        labels = torch.zeros(total_samples, dtype=torch.int, device=self.device)
         dataloader = torch.utils.data.DataLoader(dataloader.dataset, batch_size=dataloader.batch_size, shuffle=False)
         start_idx = 0
         for images, targets in tqdm(dataloader):
             images = images.to(self.device)
             targets = targets.to(self.device)
-            latents[start_idx:start_idx + dataloader.batch_size] = self.encode(images)
+            latents[start_idx:start_idx + dataloader.batch_size] = self.get_latent_space(images)
             labels[start_idx:start_idx + dataloader.batch_size] = targets
             start_idx += dataloader.batch_size
         return latents, labels

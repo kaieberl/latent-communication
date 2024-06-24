@@ -1,7 +1,12 @@
+"""Invoke with:
+    python train.py --config-name config_train -m seed=1,2,3 name=pcktae,vae latent_size=10,30,50
+"""
+
 import os.path
 from pathlib import Path
 
 import hydra
+import hydra.core.global_hydra
 import torch
 import torch.utils.data
 import lightning as L
@@ -10,6 +15,8 @@ from torchvision.datasets import MNIST, CIFAR10, FashionMNIST
 from torchvision.transforms import Compose
 
 from utils.model import get_transformations, load_model
+
+hydra.core.global_hydra.GlobalHydra.instance().clear()
 
 
 class MNISTDataModule(L.LightningDataModule):
@@ -75,28 +82,27 @@ class FMNISTDataModule(L.LightningDataModule):
 
 @hydra.main(config_path="../config")
 def main(cfg):
-    cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
+    base_dir = Path(hydra.utils.get_original_cwd()).parent
 
-    for seed in cfg.seeds:
-        cfg.seed = seed
-        L.seed_everything(seed)
+    L.seed_everything(cfg.seed)
 
-        transformations = Compose(get_transformations(cfg.name))
-        if cfg.dataset == "cifar10":
-            data_module = CIFAR10DataModule(transformations)
-            model = load_model(cfg.name, in_channels=3, size=8)
-        elif cfg.dataset == "mnist":
-            data_module = MNISTDataModule(transformations)
-            model = load_model(cfg.name, in_channels=1)
-        elif cfg.dataset == "fmnist":
-            data_module = FMNISTDataModule(transformations)
-            model = load_model(cfg.name, in_channels=1)
-        else:
-            raise ValueError(f"Unknown dataset: {cfg.dataset}")
-        trainer = Trainer(max_epochs=cfg.epochs)
-        trainer.fit(model, datamodule=data_module)
+    transformations = Compose(get_transformations(cfg.name))
+    if cfg.dataset == "cifar10":
+        data_module = CIFAR10DataModule(transformations)
+        model = load_model(cfg.name, in_channels=3, size=8)
+    elif cfg.dataset == "mnist":
+        data_module = MNISTDataModule(transformations)
+        model = load_model(cfg.name, in_channels=1)
+    elif cfg.dataset == "fmnist":
+        data_module = FMNISTDataModule(transformations)
+        model = load_model(cfg.name, in_channels=1)
+    else:
+        raise ValueError(f"Unknown dataset: {cfg.dataset}")
+    trainer = Trainer(max_epochs=cfg.epochs)
+    trainer.fit(model, datamodule=data_module)
 
-        torch.save(model.state_dict(), cfg.path)
+    path = base_dir / "models" / f"{cfg.dataset.upper()}_{cfg.name.upper()}_{cfg.latent_size}_{cfg.seed}.pth"
+    torch.save(model.state_dict(), path)
 
 
 if __name__ == '__main__':
