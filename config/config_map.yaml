@@ -3,7 +3,7 @@ lamda: 0.0
 num_samples: 10
 hidden_size: 32
 learning_rate: 0.008
-epochs: 1
+epochs: 20
 dataset: fmnist
 base_dir: .
 storage_path: .

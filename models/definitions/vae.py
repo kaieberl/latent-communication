@@ -93,6 +93,7 @@ class Decoder(nn.Module):
 class VAE(BaseModel):
     def __init__(self, in_dim, latent_dim):
         super(VAE, self).__init__()
+        self.hidden_dim = latent_dim
         self.encoder = Encoder(in_dim, latent_dim)
         self.distribution = Distribution(latent_dim)
         self.decoder = Decoder(in_dim, latent_dim)
@@ -106,8 +107,6 @@ class VAE(BaseModel):
         result = self.encoder(x)
         mu, log_var = self.distribution(result)
         return mu, log_var
-
-
   
     def decode(self, z):
         """
@@ -150,7 +149,6 @@ class VAE(BaseModel):
         Returns the reconstruction loss of the VAE.
         """
         return nn.functional.mse_loss(x_reconst, x, reduction='sum')
-
 
     def get_latent_space(self, x):
         """

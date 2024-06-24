@@ -1,0 +1,6 @@
+outs:
+- md5: 0ff1a28b6ab6ea2a1d0e221b89aaba4b.dir
+  size: 74061824
+  nfiles: 16
+  hash: md5
+  path: VAE

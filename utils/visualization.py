@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import torch
@@ -120,7 +122,7 @@ def plot_error_dist(errors, labels, fig_path=None):
     if isinstance(errors, torch.Tensor):
         errors = errors.numpy()
     for label in np.unique(labels):
-        sns.kdeplot(errors[labels == label], label=f'Class {label}', shade=True)
+        sns.kdeplot(errors[labels == label], label=f'Class {label}', fill=True)
     plt.title('Mapping Error Distribution')
     plt.xlabel('Mapping Error')
     plt.ylabel('Density')
@@ -149,15 +151,16 @@ def visualize_results(cfg, labels, latents1, latents2):
         latents2 = latents2.detach().cpu().numpy()
     errors = np.linalg.norm(latents1 - latents2, axis=1)
 
+    Path(cfg.storage_path).mkdir(parents=True, exist_ok=True)
     pca, latents1_2d = visualize_latent_space_pca(latents1, labels,
-                                                  f"{cfg.storage_path}/latent_space_pca_{cfg.model2.name}_{cfg.model2.seed}.png")
+                                                  f"{cfg.storage_path}/latent_space_pca_{cfg.model2.name}_{cfg.model2.seed}.png", show_fig=False)
     visualize_latent_space_pca(latents2, labels,
                                f"{cfg.storage_path}/latent_space_pca_{cfg.model1.name}_{cfg.model1.seed}_transformed.png",
-                               pca=pca)
+                               pca=pca, show_fig=False)
     visualize_mapping_error(latents1_2d, errors,
-                            f"{cfg.storage_path}/mapping_error_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}.png")
+                            f"{cfg.storage_path}/mapping_error_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}.png", show_fig=False)
     print(f"MSE: {np.mean(errors):.4f}")
-    plot_error_dist(errors, labels, f"{cfg.storage_path}/mapping_error_distribution_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}.png")
+    # plot_error_dist(errors, labels, f"{cfg.storage_path}/mapping_error_distribution_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}.png")
 
 
 def visualize_modified_latent_space_pca(
