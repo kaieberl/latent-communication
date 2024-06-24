@@ -1,5 +1,5 @@
 """Invoke with:
-    python optimization/fit_mapping.py --config-name config_map -m model1.seed=1,2,3 model2.seed=1,2,3 model1.name=vae model2.name=vae model1.latent_size=10,30,50 model2.latent_size=10,30,50
+    python optimization/fit_mapping.py --config-name config_map -m model1.seed=1,2,3 model2.seed=1,2,3 model1.name=vae model2.name=vae model1.latent_size=10,30,50 model2.latent_size=10,30,50 hydra.output_subdir=null
 """
 
 from pathlib import Path
@@ -46,11 +46,14 @@ def get_latents(cfg, test=False):
 
     if not test:
         torch.manual_seed(0)
-        indices = torch.randperm(50000)[:cfg.num_samples]
         for model_name in ['model1', 'model2']:
             if 'train_latents_path' in cfg[model_name]:
                 labels = torch.load(cfg.train_label_path, map_location=device)
                 z = torch.load(cfg[model_name].train_latents_path, map_location=device)
+                indices = []
+                for i in range(10):
+                    indices += torch.where(torch.load(cfg.train_label_path, map_location=device) == i)[0][
+                               :cfg.num_samples // 10].tolist()
                 latents[model_name] = z[indices]
             else:
                 model = load_model(cfg[model_name].name, cfg[model_name].path, in_channels, size, cfg[model_name].latent_size)
@@ -64,6 +67,9 @@ def get_latents(cfg, test=False):
                     dataset = CIFAR10(root=cfg.base_dir / 'data', train=True, transform=transformations, download=True)
                 else:
                     raise ValueError("Invalid dataset")
+                indices = []
+                for i in range(10):
+                    indices += torch.where(torch.tensor(dataset.targets) == i)[0][:cfg.num_samples // 10].tolist()
                 dataloader = DataLoader(dataset, batch_size=cfg.num_samples, sampler=SubsetRandomSampler(indices))
                 latents[model_name], labels = model.get_latent_space_from_dataloader(dataloader)
     else:
