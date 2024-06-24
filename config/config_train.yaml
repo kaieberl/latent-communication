@@ -1,0 +1,6 @@
+dataset: fmnist
+seed: 1
+latent_size: 16
+name: vae
+epochs: 15
+batch_size: 64

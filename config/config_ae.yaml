@@ -1,0 +1,14 @@
+experiment_name: AE-LinearTransform
+mapping: Linear
+lamda: 0.01
+num_samples: 100
+base_dir: .
+storage_path: ${base_dir}/results/transformations/${.experiment_name}
+model1:
+  seed: 3
+  path: ${base_dir}/models/checkpoints/AE/MNIST/MNIST_AE_${.seed}_10.pth
+  name: ae
+model2:
+  seed: 4
+  path: ${base_dir}/models/checkpoints/AE/MNIST/MNIST_AE_${.seed}_10.pth
+  name: ae
