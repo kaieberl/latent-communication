@@ -1,5 +1,5 @@
 """Invoke with:
-    python stitching/create_calculation_databases.py --config-name config_map -m dataset=fmnist model1.seed=1,2,3 model2.seed=1,2,3 model1.name=vae model2.name=vae model1.latent_size=10,30,50 model2.latent_size=10,30,50 hydra.output_subdir=null
+    python stitching/create_calculation_databases.py --config-name config_map -m directory_to_explore=results/transformations/mapping_files/PCKTAE filters=FMNIST#convex hydra.output_subdir=null
 """
 
 from pathlib import Path
@@ -44,8 +44,8 @@ def create_datasets(filters, directory_to_explore):
     top_indices_model1, top_indices_model2, low_indices_model2, low_indices_model1 = [], [], [], []
     # Loop through files and process
     for file in iteration:
-        iteration.set_description(f"Processing {file}")
         file = file[:-4]
+        iteration.set_description(f"Processing {file}")
         data_info_1, data_info_2, trans_info = file.split(">")
 
         # Load dataset and model 1 if needed
@@ -134,21 +134,20 @@ def create_datasets(filters, directory_to_explore):
                     "variance": variance
                 })
 
-        if(latent_right_np.shape[1] < latent_left_np.shape[1]):
-            # Add zeros to the latent_right
-            size = latent_left_np.shape[1] - latent_right_np.shape[1]
-            latent_right_enlarged =  np.pad(latent_right_np, ((0,0),(0, size)), mode='constant', constant_values=0)
-        else:
-            latent_right_enlarged = latent_right_np
+        if (data_info_1_old != data_info_1) or (data_info_2_old != data_info_2):
+            if(latent_right_np.shape[1] < latent_left_np.shape[1]):
+                # Add zeros to the latent_right
+                size = latent_left_np.shape[1] - latent_right_np.shape[1]
+                latent_right_enlarged =  np.pad(latent_right_np, ((0,0),(0, size)), mode='constant', constant_values=0)
+            else:
+                latent_right_enlarged = latent_right_np
 
-        
-        if(latent_right_np.shape[1] > latent_left_np.shape[1]):
-            # Add zeros to the latent_left
-            size = latent_right_np.shape[1] - latent_left_np.shape[1]
-            latent_left_enlarged = np.pad(latent_left_np, ((0,0),(0, size)), mode='constant', constant_values=0)
-        else:
-            latent_left_enlarged = latent_left_np
-
+            if(latent_right_np.shape[1] > latent_left_np.shape[1]):
+                # Add zeros to the latent_left
+                size = latent_right_np.shape[1] - latent_left_np.shape[1]
+                latent_left_enlarged = np.pad(latent_left_np, ((0,0),(0, size)), mode='constant', constant_values=0)
+            else:
+                latent_left_enlarged = latent_left_np
 
         # Process transformations
         list_info_trans = trans_info.split("_")
@@ -281,10 +280,6 @@ def create_datasets(filters, directory_to_explore):
             results_class_df = pd.DataFrame(results_list_classes)
             results_df = pd.DataFrame(results_list)
             error_distribution_df = pd.DataFrame(error_distribution)
-            results_top_df.to_csv("results_top.csv", index=False)
-            results_class_df.to_csv("results_class.csv", index=False)
-            results_df.to_csv("results.csv", index=False)
-            error_distribution_df.to_csv("error_distribution.csv", index=False)
             loop_count = 0
         loop_count += 1
 
@@ -292,34 +287,18 @@ def create_datasets(filters, directory_to_explore):
     results_class_df = pd.DataFrame(results_list_classes)
     results_df = pd.DataFrame(results_list)
     error_distribution_df = pd.DataFrame(error_distribution)
-    error_distribution_df.to_csv("error_distribution.csv", index=False)
-    results_top_df.to_csv("results_top.csv", index=False)
-    results_class_df.to_csv("results_class.csv", index=False)
-    results_df.to_csv("results.csv", index=False)
-
+    return results_top_df, results_class_df, results_df, error_distribution_df
 
 
 @hydra.main(version_base="1.1", config_path="../config")
 def main(cfg : DictConfig) -> None:
-    # check if models are equal
-    if cfg.model1.name == cfg.model2.name and cfg.model1.seed == cfg.model2.seed:
-        return
+    
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
-    cfg.model1.path = cfg.base_dir / "models/checkpoints" / f"{cfg.model1.name.upper()}/{cfg.dataset.upper()}/{cfg.dataset.upper()}_{cfg.model1.name.upper()}_{cfg.model1.latent_size}_{cfg.model1.seed}.pth"
-    cfg.model2.path = cfg.base_dir / "models/checkpoints" / f"{cfg.model2.name.upper()}/{cfg.dataset.upper()}/{cfg.dataset.upper()}_{cfg.model2.name.upper()}_{cfg.model2.latent_size}_{cfg.model2.seed}.pth"
-    latents1, latents2 = get_latents(cfg)[0].values()
-
-    mapping = create_mapping(cfg, latents1, latents2)
-    mapping.fit()
-    storage_path = cfg.base_dir / "results/transformations/mapping_files" / f"{cfg.dataset.upper()}_{cfg.model1.name.upper()}_{cfg.model1.seed}>{cfg.dataset.upper()}_{cfg.model2.name.upper()}_{cfg.model2.seed}>{cfg.mapping}_{cfg.num_samples}_{cfg.lamda}_{'equally'}"
-    mapping.save_results(storage_path)
-
-    latents, labels = get_latents(cfg, test=True)
-    latents1, latents2 = latents.values()
-    latents1_trafo = mapping.transform(latents1)
-    cfg.storage_path = cfg.base_dir / "results/transformations/figures" / cfg.model1.name.upper()
-    visualize_results(cfg, labels, latents2, latents1_trafo)
-
+    results_top_df, results_class_df, results_df, error_distribution_df = create_datasets(cfg.filters, cfg.directory_to_explore)
+    results_top_df.to_csv("results/transformations/calculations_databases/" + cfg.output_name + "_top.csv")
+    results_class_df.to_csv("results/transformations/calculations_databases/" + cfg.output_name + "_class.csv")
+    results_df.to_csv("results/transformations/calculations_databases/" + cfg.output_name + ".csv")
+    error_distribution_df.to_csv("results/transformations/calculations_databases/" + cfg.output_name + "_error_distribution.csv")
 
 if __name__ == '__main__':
     main()
