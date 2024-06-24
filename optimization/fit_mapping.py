@@ -1,5 +1,5 @@
 """Invoke with:
-    python optimization/fit_mapping.py --config-name config_map -m model1.seed=1,2,3 model2.seed=1,2,3 model1.name=vae model2.name=vae model1.latent_size=10,30,50 model2.latent_size=10,30,50 hydra.output_subdir=null
+    python optimization/fit_mapping.py --config-name config_map -m dataset=mnist,fmnist model1.seed=1,2,3 model2.seed=1,2,3 model1.name=vae model2.name=vae model1.latent_size=10,30,50 model2.latent_size=10,30,50 hydra.output_subdir=null
 """
 
 from pathlib import Path
@@ -105,6 +105,9 @@ def create_mapping(cfg, latents1, latents2, do_print=True):
     elif cfg.mapping == 'NeuralNetwork':
         from optimization.optimizer import NeuralNetworkFitting
         mapping = NeuralNetworkFitting(latents1, latents2, hidden_dim=cfg.hidden_size, lamda=cfg.lamda, learning_rate=cfg.learning_rate, epochs=cfg.epochs, do_print=do_print)
+    elif cfg.mapping == 'Kernel':
+        from optimization.optimizer import KernelFitting
+        mapping = KernelFitting(latents1, latents2, lamda=cfg.lamda, gamma=cfg.gamma, do_print=do_print)
     else:
         raise ValueError("Invalid experiment name")
     return mapping

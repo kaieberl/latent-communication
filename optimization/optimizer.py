@@ -263,3 +263,90 @@ class NeuralNetworkFitting(BaseOptimizer):
         instance = cls(np.empty((1, 1)), np.empty((1, 1)), 0, 0)
         instance.model = model
         return instance
+
+
+class KernelFitting(BaseOptimizer):
+    def __init__(self, z1, z2, lamda, gamma, do_print=True):
+        """
+        Initializes the KernelFitting class with an RBF kernel.
+
+        Parameters:
+            z1 (np.ndarray): Input data matrix of shape (n_samples, n_features)
+            z2 (np.ndarray): Output data matrix of shape (n_samples, n_outputs)
+            lamda (float): Regularization parameter
+            gamma (float): Parameter for the RBF kernel
+        """
+        super().__init__(z1, z2)
+        self.z1 = z1
+        self.z2 = z2
+        self.lamda = lamda
+        self.gamma = gamma
+        self.n_samples = z1.shape[0]
+        self.n_outputs = z2.shape[1]
+        self.alpha = cp.Variable((self.n_samples, self.n_outputs))
+        self.K = self.compute_kernel_matrix(z1)
+        self.problem = None
+        self.do_print = do_print
+
+    def compute_kernel_matrix(self, z):
+        """
+        Computes the RBF kernel matrix.
+
+        Parameters:
+            z (np.ndarray): Data matrix
+
+        Returns:
+            np.ndarray: Kernel matrix
+        """
+        if isinstance(z, torch.Tensor):
+            z = z.detach().cpu().numpy()
+        sq_dists = np.sum(z**2, axis=1).reshape(-1, 1) + np.sum(z**2, axis=1) - 2 * np.dot(z, z.T)
+        K = np.exp(-self.gamma * sq_dists)
+        return K
+
+    def define_loss(self):
+        """
+        Defines the loss function for the kernel fitting problem.
+        """
+        residuals = self.K @ self.alpha - self.z2
+        loss = cp.norm(residuals, 'fro')**2 + self.lamda * cp.norm(self.alpha, 'fro')**2
+        return loss
+
+    def solve(self):
+        """
+        Solves the optimization problem.
+        """
+        loss = self.define_loss()
+        self.problem = cp.Problem(cp.Minimize(loss))
+        self.problem.solve()
+        if self.do_print:
+            print("Problem solved with status:", self.problem.status)
+
+    def get_results(self):
+        """
+        Returns the results of the optimization problem.
+        """
+        if self.problem is None or self.problem.status != cp.OPTIMAL:
+            raise Exception("The problem has not been solved yet or did not converge.")
+        return self.problem.value, self.alpha.value
+
+    def print_results(self):
+        """
+        Prints the results of the optimization problem.
+        """
+        opt_value, alpha_opt = self.get_results()
+        print("Optimal value: ", opt_value)
+        print("Optimal alpha coefficients:\n", alpha_opt)
+
+    def transform(self, z1):
+        """
+        Transforms new input data using the learned model.
+
+        Parameters:
+            z1 (np.ndarray): New input data
+
+        Returns:
+            np.ndarray: Transformed data
+        """
+        K_new = self.compute_kernel_matrix(z1)
+        return K_new @ self.alpha.value
