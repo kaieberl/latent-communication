@@ -1,3 +1,4 @@
 directory_to_explore: /results/transformations
 filters: FMNIST
 output_name: PCKT_FMNIST
+base_dir: .
