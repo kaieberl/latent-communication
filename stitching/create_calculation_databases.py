@@ -1,5 +1,5 @@
 """Invoke with:
-    python stitching/create_calculation_databases.py --config-name config_map -m directory_to_explore=results/transformations/mapping_files/PCKTAE filters=FMNIST#convex hydra.output_subdir=null
+    python stitching/create_calculation_databases.py --config-name config_map -m directory_to_explore=results/transformations/mapping_files/PCKTAE filters=FMNIST.convex hydra.output_subdir=null output_name=PCKTAE
 """
 
 from pathlib import Path
@@ -23,7 +23,25 @@ from utils.visualization import visualize_results
 DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('mps') if torch.backends.mps.is_available() else 'cpu'
 hydra.core.global_hydra.GlobalHydra.instance().clear()
 
+def find_latentcommunication_dir():
+    script_path = os.path.abspath(__file__)
+    current_dir = os.path.dirname(script_path)
+    while current_dir and os.path.basename(current_dir) != 'latent-communication':
+        current_dir = os.path.dirname(current_dir)
+    if os.path.basename(current_dir) == 'latent-communication':
+        return current_dir
+    else:
+        raise FileNotFoundError("The 'latent-communication' folder was not found in the directory tree.")
+
+try:
+    latentcommunication_dir = find_latentcommunication_dir()
+    os.chdir(latentcommunication_dir)
+    print(f"Changed working directory to: {latentcommunication_dir}")
+except FileNotFoundError as e:
+    print(e)
+
 def create_datasets(filters, directory_to_explore):
+    filters = filters.split(".")
     results_list_explore = sorted(os.listdir(directory_to_explore))
     # Initialize result lists
     results_list = []
@@ -289,13 +307,11 @@ def create_datasets(filters, directory_to_explore):
     error_distribution_df = pd.DataFrame(error_distribution)
     return results_top_df, results_class_df, results_df, error_distribution_df
 
-
-@hydra.main(version_base="1.1", config_path="../config")
+@hydra.main(version_base=None, config_path="../config", config_name="config")
 def main(cfg : DictConfig) -> None:
-    
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
     results_top_df, results_class_df, results_df, error_distribution_df = create_datasets(cfg.filters, cfg.directory_to_explore)
-    results_top_df.to_csv("results/transformations/calculations_databases/" + cfg.output_name + "_top.csv")
+    results_top_df.to_csv(f"results/transformations/calculations_databases/" + cfg.output_name + "_top.csv")
     results_class_df.to_csv("results/transformations/calculations_databases/" + cfg.output_name + "_class.csv")
     results_df.to_csv("results/transformations/calculations_databases/" + cfg.output_name + ".csv")
     error_distribution_df.to_csv("results/transformations/calculations_databases/" + cfg.output_name + "_error_distribution.csv")

@@ -16,5 +16,9 @@ setup(
         'pandas',
         'matplotlib',
         'scikit-learn'
+        'tqdm',
+        'tensorboard',
+        'pytorch-lightning',
+        'seaborn',
     ],
 )
