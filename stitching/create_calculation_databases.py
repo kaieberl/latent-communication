@@ -74,8 +74,6 @@ def create_datasets(filters, directory_to_explore):
     """
     filters = filters.split(".")
     results_list_explore = sorted(os.listdir(directory_to_explore))
-    # Initialize result lists
-    results_list = []
     results_list_classes = []
     results_top = []
     error_distribution = []
@@ -85,12 +83,10 @@ def create_datasets(filters, directory_to_explore):
 
     # Loss criterion
     criterion = nn.MSELoss()
-
+    list_va = [file for file in results_list_explore if all(x in file for x in filters)]
+    list_va = sorted(list_va)
     # Loopcount
-    iteration = tqdm(
-        [file for file in results_list_explore if all(x in file for x in filters)]
-    )
-    loop_count = 0
+    iteration = tqdm(list_va, desc="Processing files", position=0, leave=True)
 
     top_indices_model1, top_indices_model2, low_indices_model2, low_indices_model1 = (
         [],
@@ -217,11 +213,12 @@ def create_datasets(filters, directory_to_explore):
                         "variance": variance,
                     }
                 )
-
+        Flag_transfom_latent = 0
         if (data_info_1_old != data_info_1) or (data_info_2_old != data_info_2):
             if latent_right_np.shape[1] < latent_left_np.shape[1]:
                 # Add zeros to the latent_right
                 size = latent_left_np.shape[1] - latent_right_np.shape[1]
+                Flag_transfom_latent = size
                 latent_right_enlarged = np.pad(
                     latent_right_np,
                     ((0, 0), (0, size)),
@@ -230,7 +227,6 @@ def create_datasets(filters, directory_to_explore):
                 )
             else:
                 latent_right_enlarged = latent_right_np
-
             if latent_right_np.shape[1] > latent_left_np.shape[1]:
                 # Add zeros to the latent_left
                 size = latent_right_np.shape[1] - latent_left_np.shape[1]
@@ -265,22 +261,33 @@ def create_datasets(filters, directory_to_explore):
             latent_left_enlarged
             / np.linalg.norm(latent_left_enlarged, axis=1)[:, np.newaxis]
         )
+
         latent_transformed_normalized = (
             transformed_latent_space.detach().cpu().numpy()
             / np.linalg.norm(transformed_latent_space.detach().cpu().numpy(), axis=1)[
                 :, np.newaxis
             ]
         )
+        if Flag_transfom_latent != 0:
+            latent_transformed_normalized_enlarged = np.pad(
+                latent_transformed_normalized,
+                ((0, 0), (0, Flag_transfom_latent)),
+                mode="constant",
+                constant_values=0,
+            )
+            Flag_transfom_latent
+        else:
+            latent_transformed_normalized_enlarged = latent_transformed_normalized
 
         # Calculate the cosine similarity
         cosine_similarity_original = np.sum(
             latent_right_normalized * latent_left_normalized, axis=1
         )
         cosine_similarity_stitched_mod1 = np.sum(
-            latent_left_normalized * latent_transformed_normalized, axis=1
+            latent_left_normalized * latent_transformed_normalized_enlarged, axis=1
         )
         cosine_similarity_stitched_mod2 = np.sum(
-            latent_right_normalized * latent_transformed_normalized, axis=1
+            latent_right_normalized * latent_transformed_normalized_enlarged, axis=1
         )
         # Decode latents
         decoded_transformed = model2.decode(transformed_latent_space).to(DEVICE).float()
@@ -293,20 +300,6 @@ def create_datasets(filters, directory_to_explore):
         mse_loss_per_image = np.mean(
             (decoded_transformed_np - images_np) ** 2, axis=(1, 2, 3)
         )
-        for i in range(n_classes):
-            class_curr = str(i)
-            mean = np.mean(mse_loss_per_image[indices])
-            variance = np.var(mse_loss_per_image[indices])
-            error_distribution.append(
-                {
-                    "model": file,
-                    "parent_left": data_info_1,
-                    "parent_right": data_info_2,
-                    "class": class_curr,
-                    "mean": mean,
-                    "variance": variance,
-                }
-            )
 
         # Get indices of top and bottom 5% Images
         sorted_indices_stitched = np.argsort(best_images_stitched)
@@ -378,26 +371,6 @@ def create_datasets(filters, directory_to_explore):
                 }
             )
 
-        # Calculate MSE losses
-        mse_loss = criterion(decoded_transformed, images).item()
-
-        results_list.append(
-            {
-                "dataset": name_dataset2,
-                "model1": file1,
-                "model2": file2,
-                "sampling_strategy": sampling_strategy,
-                "mapping": mapping_name,
-                "lambda": lamda_t,
-                "num_samples": num_samples,
-                "MSE_loss": mse_loss,
-                "latent_dim": size_of_the_latent2,
-                "MSE_loss_model1": mse_loss_model1_single,
-                "MSE_loss_model2": mse_loss_model2_single,
-                "class": None,
-            }
-        )
-
         # Calculate class-wise MSE losses
         for i in range(n_classes):
             indices = class_indices[i]
@@ -422,25 +395,16 @@ def create_datasets(filters, directory_to_explore):
                 }
             )
 
-        if loop_count == 100:
-            results_top_df = pd.DataFrame(results_top)
-            results_class_df = pd.DataFrame(results_list_classes)
-            results_df = pd.DataFrame(results_list)
-            error_distribution_df = pd.DataFrame(error_distribution)
-            loop_count = 0
-        loop_count += 1
-
     results_top_df = pd.DataFrame(results_top)
     results_class_df = pd.DataFrame(results_list_classes)
-    results_df = pd.DataFrame(results_list)
     error_distribution_df = pd.DataFrame(error_distribution)
-    return results_top_df, results_class_df, results_df, error_distribution_df
+    return results_top_df, results_class_df, error_distribution_df
 
 
 @hydra.main(version_base=None, config_path="../config", config_name="config")
 def main(cfg: DictConfig) -> None:
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
-    results_top_df, results_class_df, results_df, error_distribution_df = (
+    results_top_df, results_class_df, error_distribution_df = (
         create_datasets(cfg.filters, cfg.directory_to_explore)
     )
     results_top_df.to_csv(
@@ -450,9 +414,6 @@ def main(cfg: DictConfig) -> None:
         "results/transformations/calculations_databases/"
         + cfg.output_name
         + "_class.csv"
-    )
-    results_df.to_csv(
-        "results/transformations/calculations_databases/" + cfg.output_name + ".csv"
     )
     error_distribution_df.to_csv(
         "results/transformations/calculations_databases/"
