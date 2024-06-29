@@ -1,15 +1,16 @@
 """Invoke with:
 python stitching/create_calculation_databases.py --config-name config_calc -m directory_to_explore=results/transformations/mapping_files/PCKTAE filters=FMNIST.convex hydra.output_subdir=null output_name=PCKTAE
 
-This script creates the calculation databases for the transformations. It takes the mapping files and the results of the models and calculates four different dataframes to then use for various visualizations. The script is called from the command line and takes the following arguments:
+This script creates the calculation databases for the transformations. It takes the mapping files and
+the results of the models and calculates four different dataframes to then use for various visualizations. 
+The script is called from the command line and takes the following arguments:
     - directory_to_explore: The directory where the mapping files are stored.
     - filters: The filters to apply to the files in the directory.
     - output_name: The name of the output files.
 """
-
 import os
+import sys
 from pathlib import Path
-
 import hydra
 import hydra.core.global_hydra
 import numpy as np
@@ -18,6 +19,25 @@ import torch
 import torch.nn as nn
 from omegaconf import DictConfig
 from tqdm import tqdm
+
+# Define the project root directory name
+PROJECT_ROOT_DIR = "latent-communication"
+
+# Get the absolute path of the current script
+current_dir = os.path.abspath(os.path.dirname(__file__))
+
+# Find the project root by walking up the directory tree
+while current_dir:
+    if os.path.basename(current_dir) == PROJECT_ROOT_DIR:
+        break  # Found the project root!
+    current_dir = os.path.dirname(current_dir)
+else:
+    raise FileNotFoundError(f"Project root '{PROJECT_ROOT_DIR}' not found in the directory tree.")
+
+# Add the project root and any necessary subdirectories to sys.path
+sys.path.insert(0, current_dir) 
+sys.path.insert(0, os.path.join(current_dir, "utils"))  # Add the utils directory if needed
+
 
 from utils.dataloaders.get_dataloaders import define_dataloader
 from utils.get_mapping import load_mapping
@@ -61,7 +81,69 @@ except FileNotFoundError as e:
     print(e)
 
 
-def create_datasets(filters, directory_to_explore):
+def save_dataframes(results_top, results_list_classes, error_distribution, output_name):
+    """
+    Save the dataframes to the results folder.
+
+    Args:
+        results_top_df (pd.DataFrame): The dataframe containing the top indices information.
+        results_class_df (pd.DataFrame): The dataframe containing the class-wise MSE losses.
+        error_distribution_df (pd.DataFrame): The dataframe containing the error distribution information.
+        output_name (str): The name of the output files.
+
+    Returns:
+        None
+    """
+    results_top_df = pd.DataFrame(results_top)
+    results_class_df = pd.DataFrame(results_list_classes)
+    error_distribution_df = pd.DataFrame(error_distribution)
+    #check if the file already exists
+    if os.path.exists("results/transformations/calculations_databases/" + output_name + "_top.csv"):
+        results_top_df.to_csv(
+            "results/transformations/calculations_databases/" + output_name + "_top.csv",
+            mode="a",
+            header=False,
+        )
+        results_class_df.to_csv(
+            "results/transformations/calculations_databases/" + output_name + "_class.csv",
+            mode="a",
+            header=False,
+        )
+        error_distribution_df.to_csv(
+            "results/transformations/calculations_databases/"
+            + output_name
+            + "_error_distribution.csv",
+            mode="a",
+            header=False,
+        )        
+    else:
+        results_top_df.to_csv(
+            "results/transformations/calculations_databases/" + output_name + "_top.csv"
+        )
+        results_class_df.to_csv(
+            "results/transformations/calculations_databases/" + output_name + "_class.csv"
+        )
+        error_distribution_df.to_csv(
+            "results/transformations/calculations_databases/"
+            + output_name
+            + "_error_distribution.csv"
+        )
+    return [], [], []
+
+def create_old_datasets(directory_to_explore):
+    '''
+    Create the old datasets based on the given directory to explore.
+    '''
+    dataframe = pd.read_csv(directory_to_explore)
+    #drop all columns that are not names
+    dataframe = dataframe[['model1', 'model2', 'sampling_strategy', 'mapping', 'num_samples', 'lambda']]
+    #dataframe join the columns toghtether in a single column of strings
+    dataframe['combined'] = dataframe[['sampling_strategy', 'mapping', 'num_samples', 'lambda']].astype(str).agg('_'.join, axis=1) 
+    dataframe = dataframe[['model1', 'model2','combined']].astype(str).agg('>'.join, axis=1)
+    return dataframe
+    
+
+def create_datasets(filters, directory_to_explore, current_dir):
     """
     Create datasets based on the given filters and directory to explore.
 
@@ -81,9 +163,11 @@ def create_datasets(filters, directory_to_explore):
     # Initialize old data information to avoid repeated loading
     data_info_1_old, data_info_2_old, name_dataset1_old = None, None, None
 
+#    old_list = create_old_datasets(current_dir)
+
     # Loss criterion
     criterion = nn.MSELoss()
-    list_va = [file for file in results_list_explore if all(x in file for x in filters)]
+    list_va = [file for file in results_list_explore if all(x in file for x in filters)] # and not (old_list.isin([file]).any())]
     list_va = sorted(list_va)
     # Loopcount
     iteration = tqdm(list_va, desc="Processing files", position=0, leave=True)
@@ -94,6 +178,10 @@ def create_datasets(filters, directory_to_explore):
         [],
         [],
     )
+    
+
+    
+    count = 0
     # Loop through files and process
     for file in iteration:
         file = file[:-4]
@@ -138,7 +226,6 @@ def create_datasets(filters, directory_to_explore):
             num_top_indices = int(np.ceil(best_images_model1.size * 0.05))
             top_indices_model1 = sorted_indices_model1[-num_top_indices:]
             low_indices_model1 = sorted_indices_model1[:num_top_indices]
-            mse_loss_model1_single = criterion(decoded_left, images).item()
             mse_loss_model1 = []
             mse_loss_per_image = np.mean(
                 (decoded_left_np - images_np) ** 2, axis=(1, 2, 3)
@@ -189,7 +276,6 @@ def create_datasets(filters, directory_to_explore):
                 np.sum(latent_right.cpu().detach().numpy(), axis=1)
                 - np.sum(latent_left.cpu().detach().numpy(), axis=1)
             )
-            mse_loss_model2_single = criterion(decoded_right, images).item()
             mse_loss_model2 = []
             mse_loss_per_image = np.mean(
                 (decoded_right_np - images_np) ** 2, axis=(1, 2, 3)
@@ -213,12 +299,12 @@ def create_datasets(filters, directory_to_explore):
                         "variance": variance,
                     }
                 )
-        Flag_transfom_latent = 0
+        flag_transfom_latent = 0
         if (data_info_1_old != data_info_1) or (data_info_2_old != data_info_2):
             if latent_right_np.shape[1] < latent_left_np.shape[1]:
                 # Add zeros to the latent_right
                 size = latent_left_np.shape[1] - latent_right_np.shape[1]
-                Flag_transfom_latent = size
+                flag_transfom_latent = size
                 latent_right_enlarged = np.pad(
                     latent_right_np,
                     ((0, 0), (0, size)),
@@ -268,14 +354,14 @@ def create_datasets(filters, directory_to_explore):
                 :, np.newaxis
             ]
         )
-        if Flag_transfom_latent != 0:
+        if flag_transfom_latent != 0:
             latent_transformed_normalized_enlarged = np.pad(
                 latent_transformed_normalized,
-                ((0, 0), (0, Flag_transfom_latent)),
+                ((0, 0), (0, flag_transfom_latent)),
                 mode="constant",
                 constant_values=0,
             )
-            Flag_transfom_latent
+            flag_transfom_latent = 0
         else:
             latent_transformed_normalized_enlarged = latent_transformed_normalized
 
@@ -394,18 +480,30 @@ def create_datasets(filters, directory_to_explore):
                     "class": i,
                 }
             )
-
-    results_top_df = pd.DataFrame(results_top)
-    results_class_df = pd.DataFrame(results_list_classes)
-    error_distribution_df = pd.DataFrame(error_distribution)
-    return results_top_df, results_class_df, error_distribution_df
+            
+        if count%50 == 0:
+            print("dear god save me")
+            results_top, results_list_classes, error_distribution = save_dataframes(
+                results_top, results_list_classes, error_distribution, "test_run"
+            )
+        count += 1
+    return results_top, results_list_classes, error_distribution
 
 
 @hydra.main(version_base=None, config_path="../config", config_name="config")
 def main(cfg: DictConfig) -> None:
+    """
+    Main function for creating calculation databases.
+
+    Args:
+        cfg (DictConfig): Configuration dictionary.
+
+    Returns:
+        None
+    """
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
     results_top_df, results_class_df, error_distribution_df = (
-        create_datasets(cfg.filters, cfg.directory_to_explore)
+        create_datasets(cfg.filters, cfg.directory_to_explore, cfg.path_to_test_file)
     )
     results_top_df.to_csv(
         "results/transformations/calculations_databases/" + cfg.output_name + "_top.csv"
@@ -420,7 +518,6 @@ def main(cfg: DictConfig) -> None:
         + cfg.output_name
         + "_error_distribution.csv"
     )
-
 
 if __name__ == "__main__":
     main()

@@ -125,6 +125,9 @@ class DataLoaderFashionMNIST:
         for data, label in self.test_dataset:
             test_data.append(data.numpy())
             test_labels.append(label)
+            
+        test_data = np.array(test_data)
+        test_labels = np.array(test_labels)
         return torch.tensor(test_data), torch.tensor(test_labels)
     
     def get_train_subset(self):
