@@ -1,19 +1,23 @@
-mapping: Linear
+mapping: NeuralNetwork
 lamda: 0.0
 num_samples: 10
+hidden_size: 16
+learning_rate: 0.008
+epochs: 20
 dataset: fmnist
 base_dir: .
 storage_path: .
 model1:
   seed: 1
-  name: pcktae
+  name: vae
   latent_size: 8
   path: .
 model2:
   seed: 2
-  name: pcktae
+  name: vae
   latent_size: 8
   path: .
-output_name: PCKTAE
+output_name: VAE
 directory_to_explore: results/transformations/mapping_files/${output_name}
 filters: ${output_name}.convex
+visualization: tsne
