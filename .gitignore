@@ -11,5 +11,5 @@ results_top.csv
 error_distribution.csv
 results_class.csv
 /outputs/*
-
+/multirun/*
 results/transformations/calculations_databases/*
