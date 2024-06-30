@@ -21,7 +21,7 @@ def plot_latent_space(ax, df, targets, size, cmap, norm, bg_alpha=1, alpha=1):
     return ax
 
 
-def visualize_latent_space(latents, labels, fig_path=None, anchors=None, trafo=None, size=10, bg_alpha=1, alpha=1,
+def visualize_latent_space(latents, labels, fig_path=None, anchors=None, pca=None, size=10, bg_alpha=1, alpha=1,
                            title=None, show_fig=True, mode='pca'):
     """
     Visualizes the 2D latent space obtained from PCA.
@@ -31,7 +31,7 @@ def visualize_latent_space(latents, labels, fig_path=None, anchors=None, trafo=N
         labels: A tensor of shape (N,) representing the labels for each latent point.
         fig_path: Optional; Path to save the figure.
         anchors: Optional; A tensor of shape (M, dim) representing anchor points in the latent space.
-        trafo: Optional; A PCA object to use for transforming the latent space.
+        pca: Optional; A PCA object to use for transforming the latent space.
         size: Optional; Size of the points in the plot.
         bg_alpha: Optional; Alpha value for the background points.
         alpha: Optional; Alpha value for the highlighted points.
@@ -40,15 +40,15 @@ def visualize_latent_space(latents, labels, fig_path=None, anchors=None, trafo=N
         latents = latents.detach().cpu().numpy()
     if isinstance(labels, torch.Tensor):
         labels = labels.detach().cpu().numpy()
-    if trafo is None:
-        if mode == 'pca':
-            trafo = PCA(n_components=2)
-            latents_2d = trafo.fit_transform(latents)
-        elif mode == 'tsne':
-            trafo = TSNE(n_components=2)
-            latents_2d = trafo.fit_transform(latents)
-    else:
-        latents_2d = trafo.transform(latents)
+    if mode == 'pca':
+        if pca is None:
+            pca = PCA(n_components=2)
+            latents_2d = pca.fit_transform(latents)
+        else:
+            latents_2d = pca.transform(latents)
+    elif mode == 'tsne':
+        tsne = TSNE(n_components=2)
+        latents_2d = tsne.fit_transform(latents)
 
     # Normalize latents
     minimum = latents_2d.min(axis=0)
@@ -70,7 +70,7 @@ def visualize_latent_space(latents, labels, fig_path=None, anchors=None, trafo=N
 
     if anchors is not None:
         # plot anchors with star marker
-        anchors_2d = trafo.transform(anchors.view(anchors.size(0), -1).cpu().detach().numpy())
+        anchors_2d = pca.transform(anchors.view(anchors.size(0), -1).cpu().detach().numpy())
         anchors_2d = (anchors_2d - minimum) / (maximum - minimum)
         ax.scatter(anchors_2d[:, 0], anchors_2d[:, 1], marker='*', s=10, c='black')
 
@@ -82,7 +82,7 @@ def visualize_latent_space(latents, labels, fig_path=None, anchors=None, trafo=N
     if show_fig:
         plt.show()
 
-    return trafo, latents_2d
+    return pca, latents_2d
 
 
 def visualize_mapping_error(latent1, errors, fig_path=None, show_fig=True):
@@ -167,7 +167,7 @@ def visualize_results(cfg, labels, latents1, latents2):
                                               show_fig=False)
     visualize_latent_space(latents2, labels,
                                f"{cfg.storage_path}/latent_space_pca_{cfg.model1.name}_{cfg.model1.seed}_transformed.png",
-                           trafo=pca, show_fig=False)
+                           pca=pca, show_fig=False)
     visualize_mapping_error(latents1_2d, errors,
                             f"{cfg.storage_path}/mapping_error_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}.png",
                             show_fig=False)

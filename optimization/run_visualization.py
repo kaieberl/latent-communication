@@ -8,6 +8,8 @@ import hydra
 import torch
 from pathlib import Path
 
+from sklearn.manifold import TSNE
+
 from utils.visualization import visualize_mapping_error, visualize_latent_space
 from utils.dataloaders.full_dataloaders import DataLoaderMNIST
 from utils.model import load_models, get_transformations
@@ -57,29 +59,36 @@ def main(cfg: DictConfig) -> None:
     mapping = load_mapping(cfg)
 
     #Get the latent space of the test set
-    latents1, labels = get_latent_space_from_dataloader(model1, test_loader)
-    latents2, labels2 = get_latent_space_from_dataloader(model2, test_loader)
+    latents1, labels = get_latent_space_from_dataloader(model1, test_loader, max_nr_batches=1000)
+    latents2, labels2 = get_latent_space_from_dataloader(model2, test_loader, max_nr_batches=1000)
 
     latents1 = latents1.detach().numpy()
     latents2 = latents2.detach().numpy()
     labels = labels.detach().numpy()
 
     #Get transformed latent space
-    latents1_trafo = mapping.transform(latents1).detach().numpy()
+    latents1_trafo = mapping.transform(latents1)
 
     #Plot the results
     print(f"Mean error for {cfg.mapping} mapping: {np.mean(np.linalg.norm(latents2 - latents1_trafo, axis=1)):.4f}")
+    cfg.storage_path = cfg.base_dir / "results/transformations/figures" / cfg.model1.name.upper()
     visualize_latent_space(latents1, labels,
-                           f"../../figures/latent_space_pca_{cfg.model1.name}_{cfg.model1.seed}_test.png")
-    trafo, _ = visualize_latent_space(latents2, labels,
-                                    f"../../figures/latent_space_pca_{cfg.model2.name}_{cfg.model2.seed}_test.png")
+                           cfg.storage_path / f"latent_space_pca_{cfg.model1.name}_{cfg.model1.seed}_test.png", mode=cfg.visualization)
+    pca, _ = visualize_latent_space(latents2, labels,
+                                    cfg.storage_path / f"latent_space_pca_{cfg.model2.name}_{cfg.model2.seed}_test.png", mode=cfg.visualization)
     visualize_latent_space(latents1_trafo, labels,
-                           f"../../figures/latent_space_pca_{cfg.mapping}_{cfg.model1.name}_{cfg.model1.latent_size}_{cfg.model1.seed}_{cfg.model1.name}_{cfg.model2.latent_size}_{cfg.model2.seed}_test_{cfg.mapping}_{cfg.num_samples}.png",
-                           trafo=trafo)
+                           cfg.storage_path / f"latent_space_pca_{cfg.mapping}_{cfg.model1.name}_{cfg.model1.latent_size}_{cfg.model1.seed}_{cfg.model1.name}_{cfg.model2.latent_size}_{cfg.model2.seed}_test_{cfg.mapping}_{cfg.num_samples}.png",
+                           pca=pca)
     errors = np.linalg.norm(latents2 - latents1_trafo, axis=1)
-    latents2_2d = trafo.transform(latents2)
+    if cfg.visualization == 'pca':
+        latents2_2d = pca.transform(latents2)
+    elif cfg.visualization == 'tsne':
+        tsne = TSNE(n_components=2, random_state=0)
+        latents2_2d = tsne.fit_transform(latents2)
+    else:
+        raise ValueError(f"Invalid visualization method: {cfg.visualization}")
     visualize_mapping_error(latents2_2d, errors,
-                            f"../../figures/mapping_error_{cfg.model1.name}_{cfg.model1.latent_size}_{cfg.model1.seed}_{cfg.model1.name}_{cfg.model2.latent_size}_{cfg.model2.seed}_test_{cfg.mapping}_{cfg.num_samples}.png")
+                            cfg.storage_path / f"mapping_error_{cfg.model1.name}_{cfg.model1.latent_size}_{cfg.model1.seed}_{cfg.model1.name}_{cfg.model2.latent_size}_{cfg.model2.seed}_test_{cfg.mapping}_{cfg.num_samples}.png")
 
 
 if __name__ == "__main__":
