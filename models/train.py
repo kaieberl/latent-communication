@@ -89,19 +89,19 @@ def main(cfg):
     transformations = Compose(get_transformations(cfg.name))
     if cfg.dataset == "cifar10":
         data_module = CIFAR10DataModule(transformations)
-        model = load_model(cfg.name, in_channels=3, size=8)
+        model = load_model(cfg.name, in_channels=3, size=cfg.latent_size)
     elif cfg.dataset == "mnist":
         data_module = MNISTDataModule(transformations)
-        model = load_model(cfg.name, in_channels=1)
+        model = load_model(cfg.name, in_channels=1, size=cfg.latent_size)
     elif cfg.dataset == "fmnist":
         data_module = FMNISTDataModule(transformations)
-        model = load_model(cfg.name, in_channels=1)
+        model = load_model(cfg.name, in_channels=1, size=cfg.latent_size)
     else:
         raise ValueError(f"Unknown dataset: {cfg.dataset}")
     trainer = Trainer(max_epochs=cfg.epochs)
     trainer.fit(model, datamodule=data_module)
 
-    path = base_dir / "models" / f"{cfg.dataset.upper()}_{cfg.name.upper()}_{cfg.latent_size}_{cfg.seed}.pth"
+    path = base_dir / f"models/checkpoints/{cfg.name.upper()}/{cfg.dataset.upper()}/{cfg.dataset.upper()}_{cfg.name.upper()}_{cfg.latent_size}_{cfg.seed}.pth"
     torch.save(model.state_dict(), path)
 
 

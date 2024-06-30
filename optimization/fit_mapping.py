@@ -1,5 +1,5 @@
 """Invoke with:
-    python optimization/fit_mapping.py --config-name config_map -m dataset=mnist,fmnist model1.seed=1,2,3 model2.seed=1,2,3 model1.name=vae model2.name=vae model1.latent_size=10,30,50 model2.latent_size=10,30,50 hydra.output_subdir=null
+    python optimization/fit_mapping.py --config-name config_map -m dataset=mnist,fmnist lamda=0,0.001,0.01 model1.seed=1,2,3 model2.seed=1,2,3 model1.name=vae model2.name=vae model1.latent_size=10,30,50 model2.latent_size=10,30,50 hydra.output_subdir=null
 """
 
 from pathlib import Path
@@ -125,7 +125,7 @@ def main(cfg : DictConfig) -> None:
 
     mapping = create_mapping(cfg, latents1, latents2)
     mapping.fit()
-    storage_path = cfg.base_dir / "results/transformations/mapping_files" / f"{cfg.dataset.upper()}_{cfg.model1.name.upper()}_{cfg.model1.seed}>{cfg.dataset.upper()}_{cfg.model2.name.upper()}_{cfg.model2.seed}>{cfg.mapping}_{cfg.num_samples}_{cfg.lamda}_{'equally'}"
+    storage_path = cfg.base_dir / "results/transformations/mapping_files" / cfg.model1.name.upper() / f"{cfg.dataset.upper()}_{cfg.model1.name.upper()}_{cfg.model1.latent_size}_{cfg.model1.seed}>{cfg.dataset.upper()}_{cfg.model2.name.upper()}_{cfg.model2.latent_size}_{cfg.model2.seed}>{cfg.mapping}_{cfg.num_samples}_{cfg.lamda}_{'equally'}"
     mapping.save_results(storage_path)
 
     latents, labels = get_latents(cfg, test=True)

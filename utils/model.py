@@ -122,7 +122,7 @@ def get_reconstruction_error(model, test_loader):
             images, _ = data
             images = images.to(device)
             outputs = model(images)
-            loss = model.loss_function(images, *outputs) if isinstance(outputs, tuple) else model.loss_function(images,
+            loss = model.reconstruction_loss(images, *outputs) if isinstance(outputs, tuple) else model.reconstruction_loss(images,
                                                                                                                 outputs)
             total_loss += loss.item()
             # plot the image
