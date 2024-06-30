@@ -245,7 +245,7 @@ class NeuralNetworkFitting(BaseOptimizer):
         if isinstance(z1, np.ndarray):
             z1 = torch.tensor(z1, dtype=torch.float32)
         with torch.no_grad():
-            z1 = self.model(z1).numpy()
+            z1 = self.model(z1)
         return z1
 
     @classmethod

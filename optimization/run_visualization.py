@@ -39,7 +39,7 @@ def get_latent_space_from_dataloader(model, dataloader, max_nr_batches=10):
 
 
 @hydra.main(version_base="1.1", config_path="../config")
-def main(cfg: DictConfig) -> None:
+def main(cfg: DictConfig):
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
     #Load test data set to plot
     data_loader_model = DataLoaderMNIST(128, get_transformations(cfg.model1.name), seed=10, base_path=cfg.base_dir)
@@ -67,17 +67,17 @@ def main(cfg: DictConfig) -> None:
     labels = labels.detach().numpy()
 
     #Get transformed latent space
-    latents1_trafo = mapping.transform(latents1)
+    latents1_trafo = mapping.transform(latents1).numpy()
 
     #Plot the results
     print(f"Mean error for {cfg.mapping} mapping: {np.mean(np.linalg.norm(latents2 - latents1_trafo, axis=1)):.4f}")
     cfg.storage_path = cfg.base_dir / "results/transformations/figures" / cfg.model1.name.upper()
     visualize_latent_space(latents1, labels,
-                           cfg.storage_path / f"latent_space_pca_{cfg.model1.name}_{cfg.model1.seed}_test.png", mode=cfg.visualization)
+                           cfg.storage_path / f"latent_space_{cfg.visualization}_{cfg.model1.name}_{cfg.model1.seed}_test.png", mode=cfg.visualization)
     pca, _ = visualize_latent_space(latents2, labels,
-                                    cfg.storage_path / f"latent_space_pca_{cfg.model2.name}_{cfg.model2.seed}_test.png", mode=cfg.visualization)
+                                    cfg.storage_path / f"latent_space_{cfg.visualization}_{cfg.model2.name}_{cfg.model2.seed}_test.png", mode=cfg.visualization)
     visualize_latent_space(latents1_trafo, labels,
-                           cfg.storage_path / f"latent_space_pca_{cfg.mapping}_{cfg.model1.name}_{cfg.model1.latent_size}_{cfg.model1.seed}_{cfg.model1.name}_{cfg.model2.latent_size}_{cfg.model2.seed}_test_{cfg.mapping}_{cfg.num_samples}.png",
+                           cfg.storage_path / f"latent_space_{cfg.visualization}_{cfg.mapping}_{cfg.model1.name}_{cfg.model1.latent_size}_{cfg.model1.seed}_{cfg.model1.name}_{cfg.model2.latent_size}_{cfg.model2.seed}_test_{cfg.mapping}_{cfg.num_samples}.png",
                            pca=pca)
     errors = np.linalg.norm(latents2 - latents1_trafo, axis=1)
     if cfg.visualization == 'pca':

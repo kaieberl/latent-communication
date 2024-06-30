@@ -1,5 +1,5 @@
 mapping: NeuralNetwork
-lamda: 0.0
+lamda: 0.01
 num_samples: 10
 hidden_size: 16
 learning_rate: 0.008
@@ -20,4 +20,4 @@ model2:
 output_name: VAE
 directory_to_explore: results/transformations/mapping_files/${output_name}
 filters: ${output_name}.convex
-visualization: tsne
+visualization: pca
