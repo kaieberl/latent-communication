@@ -17,7 +17,7 @@ class DataLoaderMNIST:
 
         dataset_class = datasets.MNIST
         self.train_dataset = dataset_class(root=base_path / 'data', train=True, download=False, transform=transform)
-        self.test_dataset = dataset_class(root=base_path / 'data', train=False, download=False, transform=transform)
+        self.test_dataset = dataset_class(root=base_path / 'data', train=False, download=True, transform=transform)
 
         np.random.seed(self.seed)
 

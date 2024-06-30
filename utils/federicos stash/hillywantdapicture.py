@@ -20,7 +20,7 @@ from models.definitions.PCKTAE import PocketAutoencoder
 from utils.dataloaders.full_dataloaders import DataLoaderMNIST
 from utils.visualization import (
     visualize_mapping_error,
-    visualize_latent_space_pca,
+    visualize_latent_space,
     plot_latent_space,
     highlight_cluster,
 )
@@ -211,9 +211,9 @@ for num_samples, mapping, lamda in combinations:
                     mapping.save_results(storage_path + "mapping.pth")
 
                     transformed_latent_space = mapping.transform(latent_left)
-                    _, latents1_2d = visualize_latent_space_pca(latents=latent_left, labels=labels, fig_path= storage_path + "latent_left_sampled_equally.png", alpha=0.7, show_fig=True)
-                    pca, latents2_2d = visualize_latent_space_pca(latents=latent_right, labels=labels, fig_path=storage_path + "latent_right_sampled_equally.png",  alpha=0.7, show_fig=True)
-                    _, latents1_trafo_2d = visualize_latent_space_pca(transformed_latent_space, labels, storage_path + "latents1_transformed_sampled_equally.png",  pca=pca, alpha=0.7, show_fig=True)
+                    _, latents1_2d = visualize_latent_space(latents=latent_left, labels=labels, fig_path=storage_path + "latent_left_sampled_equally.png", alpha=0.7, show_fig=True)
+                    pca, latents2_2d = visualize_latent_space(latents=latent_right, labels=labels, fig_path=storage_path + "latent_right_sampled_equally.png", alpha=0.7, show_fig=True)
+                    _, latents1_trafo_2d = visualize_latent_space(transformed_latent_space, labels, storage_path + "latents1_transformed_sampled_equally.png", trafo=pca, alpha=0.7, show_fig=True)
 
                     # Visualize mapping errors
                     errors = np.linalg.norm(transformed_latent_space - latent_right, axis=1)

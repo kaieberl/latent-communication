@@ -1,7 +1,7 @@
 import torch
 import torchvision.transforms as transforms
 
-device = torch.device('cuda') if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
+device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
 
 
 def load_model(model_name, model_path=None, in_channels=1, size=7, latent_size=8, name_dataset=None, seed=0, *args,
@@ -30,7 +30,7 @@ def load_model(model_name, model_path=None, in_channels=1, size=7, latent_size=8
         model = ResnetVAE(50, in_channels)
     elif model_name == 'pcktae':
         from models.definitions.PCKTAE import PocketAutoencoder
-        model = PocketAutoencoder(path=model_path.split("/")[-1])
+        model = PocketAutoencoder(latent_size)
     elif model_name == "verysmall-ae":
         from models.definitions.ae_latentdim10 import VerySmallAutoencoder
         model = VerySmallAutoencoder()
@@ -46,11 +46,16 @@ def load_models(cfg):
     if cfg.dataset == 'mnist':
         in_channels = 1
         size = 7
+    elif cfg.dataset == 'fmnist':
+        in_channels = 1
+        size = 7
     elif cfg.dataset == 'cifar10':
         in_channels = 3
         size = 8
-    model1 = load_model(cfg.model1.name, cfg.model1.path, in_channels, size)
-    model2 = load_model(cfg.model2.name, cfg.model2.path, in_channels, size)
+    else:
+        raise ValueError(f"Unknown dataset: {cfg.dataset}")
+    model1 = load_model(cfg.model1.name, cfg.model1.path, in_channels, size, cfg.model1.latent_size)
+    model2 = load_model(cfg.model2.name, cfg.model2.path, in_channels, size, cfg.model2.latent_size)
     return model1, model2
 
 
