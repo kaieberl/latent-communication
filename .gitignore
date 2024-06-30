@@ -12,3 +12,4 @@ error_distribution.csv
 results_class.csv
 /outputs/*
 
+results/transformations/calculations_databases/*
