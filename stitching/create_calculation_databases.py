@@ -102,31 +102,31 @@ def save_dataframes(results_top, results_list_classes, error_distribution, outpu
         results_top_df.to_csv(
             "results/transformations/calculations_databases/" + output_name + "_top.csv",
             mode="a",
-            header=False, sep=";"
+            header=False, sep="#"
         )
         results_class_df.to_csv(
             "results/transformations/calculations_databases/" + output_name + "_class.csv",
             mode="a",
-            header=False, sep=";"
+            header=False, sep="#"
         )
         error_distribution_df.to_csv(
             "results/transformations/calculations_databases/"
             + output_name
             + "_error_distribution.csv",
             mode="a",
-            header=False, sep=";"
+            header=False, sep="#"
         )        
     else:
         results_top_df.to_csv(
-            "results/transformations/calculations_databases/" + output_name + "_top.csv", sep=";"
+            "results/transformations/calculations_databases/" + output_name + "_top.csv", sep="#"
         )
         results_class_df.to_csv(
-            "results/transformations/calculations_databases/" + output_name + "_class.csv", sep=";"
+            "results/transformations/calculations_databases/" + output_name + "_class.csv", sep="#"
         )
         error_distribution_df.to_csv(
             "results/transformations/calculations_databases/"
             + output_name
-            + "_error_distribution.csv", sep=";"
+            + "_error_distribution.csv", sep="#"
         )
     return [], [], []
 
@@ -166,7 +166,7 @@ def create_datasets(filters, directory_to_explore, current_dir, output_name):
 #    old_list = create_old_datasets(current_dir)
 
     # Loss criterion
-    criterion = nn.MSELoss()
+    criterion = nn.MSELoss(reduction='none')
     list_va = [file for file in results_list_explore if all(x in file for x in filters)] # and not (old_list.isin([file]).any())]
     list_va = sorted(list_va)
     # Loopcount
@@ -220,11 +220,11 @@ def create_datasets(filters, directory_to_explore, current_dir, output_name):
             decoded_left = model1.decode(latent_left).to(DEVICE).float()
             decoded_left_np = decoded_left.detach().cpu().numpy()
             #calculate all the errors
-            errors_by_image_model_1 = np.mean(np.abs(decoded_left_np - images_np) ** 2, axis=tuple(range(1, images.ndim)))
+            errors_by_image_model_1 = criterion(decoded_left, images).detach().cpu().numpy()
             #couple each error with its index
             sorted_indices_model1 = np.argsort(errors_by_image_model_1)
             
-            num_top_indices = int(np.ceil(errors_by_image_model_1.size * 0.03))
+            num_top_indices = int(np.ceil(errors_by_image_model_1.size * 0.01))
             top_indices_model1, low_indices_model1 =  [], []
             for i in range(n_classes):
                 indices = class_indices[i]
@@ -250,14 +250,7 @@ def create_datasets(filters, directory_to_explore, current_dir, output_name):
             latent_right_np = latent_right.detach().cpu().numpy()
             decoded_right = model2.decode(latent_right).to(DEVICE).float()
             decoded_right_np = decoded_right.detach().cpu().numpy()
-            errors_by_image_model_1 = np.mean(
-                np.abs(decoded_right_np - images_np), axis=tuple(range(1, images.ndim))
-            )
-            sorted_indices_model2 = np.argsort(errors_by_image_model_1)
-            top_indices_model2 = sorted_indices_model2[-num_top_indices:]
-            low_indices_model2 = sorted_indices_model2[:num_top_indices]
-            #calculate all the errors
-            errors_by_image_model_2 = np.mean(np.abs(decoded_left_np - images_np) ** 2, axis=tuple(range(1, images.ndim)))
+            errors_by_image_model_2 = criterion(decoded_right - images).detach().cpu().numpy()
             #couple each error with its index
             sorted_indices_model2 = np.argsort(errors_by_image_model_2)
             
@@ -265,7 +258,7 @@ def create_datasets(filters, directory_to_explore, current_dir, output_name):
             top_indices_model2, low_indices_model2 =  [], []
             for i in range(n_classes):
                 indices = class_indices[i]
-                filtered_indices = [idx for idx in sorted_indices_model1 if idx in indices]
+                filtered_indices = [idx for idx in sorted_indices_model2 if idx in indices]
                 top_indices_model2.append([idx for idx in filtered_indices[-num_top_indices:]])
                 low_indices_model2.append([idx for idx in filtered_indices[:num_top_indices]])
                 mean_2.append(np.mean(errors_by_image_model_2[indices]))
@@ -289,10 +282,7 @@ def create_datasets(filters, directory_to_explore, current_dir, output_name):
         decoded_transformed = model2.decode(transformed_latent_space).to(DEVICE).float()
         # Calculate reconstruction errors
         decoded_transformed_np = decoded_transformed.detach().cpu().numpy()
-        errors_by_image_stiched = np.mean(
-            np.abs(decoded_transformed_np - images_np) ** 2,
-            axis=tuple(range(1, images.ndim)),
-        )
+        errors_by_image_stiched = criterion(decoded_transformed, images).detach().cpu().numpy()
         # Get indices of top and bottom 5% Images
         sorted_indices_stitched = np.argsort(errors_by_image_stiched)
         transformed_latent_space_np = transformed_latent_space.cpu().detach().numpy()
@@ -417,17 +407,17 @@ def main(cfg: DictConfig) -> None:
     error_distribution_df = pd.DataFrame(error_distribution_df)
     
     results_top_df.to_csv(
-        "results/transformations/calculations_databases/" + cfg.output_name + "_top.csv", mode="a", header=False, sep=";"
+        "results/transformations/calculations_databases/" + cfg.output_name + "_top.csv", mode="a", header=False, sep="#"
     )
     results_class_df.to_csv(
         "results/transformations/calculations_databases/"
         + cfg.output_name
-        + "_class.csv", mode="a", header=False, sep=";"
+        + "_class.csv", mode="a", header=False, sep="#"
     )
     error_distribution_df.to_csv(
         "results/transformations/calculations_databases/"
         + cfg.output_name
-        + "_error_distribution.csv", mode="a", header=False, sep=";"
+        + "_error_distribution.csv", mode="a", header=False, sep="#"
     )
 
 if __name__ == "__main__":
