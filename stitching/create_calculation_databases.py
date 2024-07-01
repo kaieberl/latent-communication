@@ -79,8 +79,8 @@ try:
     print(f"Changed working directory to: {latentcommunication_dir}")
 except FileNotFoundError as e:
     print(e)
-
-
+    
+    
 def save_dataframes(results_top, results_list_classes, error_distribution, output_name):
     """
     Save the dataframes to the results folder.
@@ -102,31 +102,31 @@ def save_dataframes(results_top, results_list_classes, error_distribution, outpu
         results_top_df.to_csv(
             "results/transformations/calculations_databases/" + output_name + "_top.csv",
             mode="a",
-            header=False,
+            header=False, sep=";"
         )
         results_class_df.to_csv(
             "results/transformations/calculations_databases/" + output_name + "_class.csv",
             mode="a",
-            header=False,
+            header=False, sep=";"
         )
         error_distribution_df.to_csv(
             "results/transformations/calculations_databases/"
             + output_name
             + "_error_distribution.csv",
             mode="a",
-            header=False,
+            header=False, sep=";"
         )        
     else:
         results_top_df.to_csv(
-            "results/transformations/calculations_databases/" + output_name + "_top.csv"
+            "results/transformations/calculations_databases/" + output_name + "_top.csv", sep=";"
         )
         results_class_df.to_csv(
-            "results/transformations/calculations_databases/" + output_name + "_class.csv"
+            "results/transformations/calculations_databases/" + output_name + "_class.csv", sep=";"
         )
         error_distribution_df.to_csv(
             "results/transformations/calculations_databases/"
             + output_name
-            + "_error_distribution.csv"
+            + "_error_distribution.csv", sep=";"
         )
     return [], [], []
 
@@ -143,7 +143,7 @@ def create_old_datasets(directory_to_explore):
     return dataframe
     
 
-def create_datasets(filters, directory_to_explore, current_dir):
+def create_datasets(filters, directory_to_explore, current_dir, output_name):
     """
     Create datasets based on the given filters and directory to explore.
 
@@ -187,8 +187,8 @@ def create_datasets(filters, directory_to_explore, current_dir):
         file = file[:-4]
         iteration.set_description(f"Processing {file}")
         data_info_1, data_info_2, trans_info = file.split(">")
-
-        # Load dataset and model 1 if needed
+        mean_1, variance_1, mean_2, variance_2 = [], [], [], []
+        # This is actually just to check if the Ddataset has changed (which is unlikely)
         if name_dataset1_old != data_info_1.split("_")[0]:
             name_dataset1, name_model1, size_of_the_latent1, seed1 = data_info_1.split(
                 "_"
@@ -202,7 +202,7 @@ def create_datasets(filters, directory_to_explore, current_dir):
             }
             indices_class = {i: labels.cpu().numpy()[i] for i in range(len(labels))}
             images_np = images.detach().cpu().numpy()
-
+        # This checks if the first model has to be changes, and will recaluclate the latent space
         if data_info_1_old != data_info_1:
             name_dataset1, name_model1, size_of_the_latent1, seed1 = data_info_1.split(
                 "_"
@@ -215,40 +215,24 @@ def create_datasets(filters, directory_to_explore, current_dir):
                 seed=seed1,
                 model_path=file1,
             ).to(DEVICE)
-            latent_left = model1.get_latent_space(images).detach().to(DEVICE).float()
+            latent_left = model1.get_latent_space(images).float()
             latent_left_np = latent_left.detach().cpu().numpy()
             decoded_left = model1.decode(latent_left).to(DEVICE).float()
             decoded_left_np = decoded_left.detach().cpu().numpy()
-            best_images_model1 = np.mean(
-                np.abs(decoded_left_np - images_np), axis=tuple(range(1, images.ndim))
-            )
-            sorted_indices_model1 = np.argsort(best_images_model1)
-            num_top_indices = int(np.ceil(best_images_model1.size * 0.05))
-            top_indices_model1 = sorted_indices_model1[-num_top_indices:]
-            low_indices_model1 = sorted_indices_model1[:num_top_indices]
-            mse_loss_model1 = []
-            mse_loss_per_image = np.mean(
-                (decoded_left_np - images_np) ** 2, axis=(1, 2, 3)
-            )
+            #calculate all the errors
+            errors_by_image_model_1 = np.mean(np.abs(decoded_left_np - images_np) ** 2, axis=tuple(range(1, images.ndim)))
+            #couple each error with its index
+            sorted_indices_model1 = np.argsort(errors_by_image_model_1)
+            
+            num_top_indices = int(np.ceil(errors_by_image_model_1.size * 0.03))
+            top_indices_model1, low_indices_model1 =  [], []
             for i in range(n_classes):
                 indices = class_indices[i]
-                mse_loss_model1.append(
-                    criterion(decoded_left[indices], images[indices]).item()
-                )
-                class_curr = str(i)
-                mean = np.mean(mse_loss_per_image[indices])
-                variance = np.var(mse_loss_per_image[indices])
-
-                error_distribution.append(
-                    {
-                        "model": data_info_1,
-                        "parent_left": None,
-                        "parent_right": None,
-                        "class": class_curr,
-                        "mean": mean,
-                        "variance": variance,
-                    }
-                )
+                filtered_indices = [idx for idx in sorted_indices_model1 if idx in indices]
+                top_indices_model1.append([idx for idx in filtered_indices[-num_top_indices:]])
+                low_indices_model1.append([idx for idx in filtered_indices[:num_top_indices]])
+                mean_1.append(np.mean(errors_by_image_model_1[indices]))
+                variance_1.append(np.var(errors_by_image_model_1[indices]))
 
         if data_info_2_old != data_info_2:
             name_dataset2, name_model2, size_of_the_latent2, seed2 = data_info_2.split(
@@ -266,64 +250,26 @@ def create_datasets(filters, directory_to_explore, current_dir):
             latent_right_np = latent_right.detach().cpu().numpy()
             decoded_right = model2.decode(latent_right).to(DEVICE).float()
             decoded_right_np = decoded_right.detach().cpu().numpy()
-            best_images_model2 = np.mean(
+            errors_by_image_model_1 = np.mean(
                 np.abs(decoded_right_np - images_np), axis=tuple(range(1, images.ndim))
             )
-            sorted_indices_model2 = np.argsort(best_images_model2)
+            sorted_indices_model2 = np.argsort(errors_by_image_model_1)
             top_indices_model2 = sorted_indices_model2[-num_top_indices:]
             low_indices_model2 = sorted_indices_model2[:num_top_indices]
-            latent_diff_original = np.abs(
-                np.sum(latent_right.cpu().detach().numpy(), axis=1)
-                - np.sum(latent_left.cpu().detach().numpy(), axis=1)
-            )
-            mse_loss_model2 = []
-            mse_loss_per_image = np.mean(
-                (decoded_right_np - images_np) ** 2, axis=(1, 2, 3)
-            )
+            #calculate all the errors
+            errors_by_image_model_2 = np.mean(np.abs(decoded_left_np - images_np) ** 2, axis=tuple(range(1, images.ndim)))
+            #couple each error with its index
+            sorted_indices_model2 = np.argsort(errors_by_image_model_2)
+            
+            num_top_indices = int(np.ceil(errors_by_image_model_2.size * 0.03))
+            top_indices_model2, low_indices_model2 =  [], []
             for i in range(n_classes):
                 indices = class_indices[i]
-                mse_loss_model2.append(
-                    criterion(decoded_right[indices], images[indices]).item()
-                )
-                class_curr = str(i)
-                mean = np.mean(mse_loss_per_image[indices])
-                variance = np.var(mse_loss_per_image[indices])
-
-                error_distribution.append(
-                    {
-                        "model": data_info_2,
-                        "parent_left": None,
-                        "parent_right": None,
-                        "class": class_curr,
-                        "mean": mean,
-                        "variance": variance,
-                    }
-                )
-        flag_transfom_latent = 0
-        if (data_info_1_old != data_info_1) or (data_info_2_old != data_info_2):
-            if latent_right_np.shape[1] < latent_left_np.shape[1]:
-                # Add zeros to the latent_right
-                size = latent_left_np.shape[1] - latent_right_np.shape[1]
-                flag_transfom_latent = size
-                latent_right_enlarged = np.pad(
-                    latent_right_np,
-                    ((0, 0), (0, size)),
-                    mode="constant",
-                    constant_values=0,
-                )
-            else:
-                latent_right_enlarged = latent_right_np
-            if latent_right_np.shape[1] > latent_left_np.shape[1]:
-                # Add zeros to the latent_left
-                size = latent_right_np.shape[1] - latent_left_np.shape[1]
-                latent_left_enlarged = np.pad(
-                    latent_left_np,
-                    ((0, 0), (0, size)),
-                    mode="constant",
-                    constant_values=0,
-                )
-            else:
-                latent_left_enlarged = latent_left_np
+                filtered_indices = [idx for idx in sorted_indices_model1 if idx in indices]
+                top_indices_model2.append([idx for idx in filtered_indices[-num_top_indices:]])
+                low_indices_model2.append([idx for idx in filtered_indices[:num_top_indices]])
+                mean_2.append(np.mean(errors_by_image_model_2[indices]))
+                variance_2.append(np.var(errors_by_image_model_2[indices]))
 
         # Process transformations
         list_info_trans = trans_info.split("_")
@@ -338,131 +284,92 @@ def create_datasets(filters, directory_to_explore, current_dir):
             mapping.transform(latent_left), dtype=torch.float32
         ).to(DEVICE)
 
-        # Normalize the latent space
-        latent_right_normalized = (
-            latent_right_enlarged
-            / np.linalg.norm(latent_right_enlarged, axis=1)[:, np.newaxis]
-        )
-        latent_left_normalized = (
-            latent_left_enlarged
-            / np.linalg.norm(latent_left_enlarged, axis=1)[:, np.newaxis]
-        )
 
-        latent_transformed_normalized = (
-            transformed_latent_space.detach().cpu().numpy()
-            / np.linalg.norm(transformed_latent_space.detach().cpu().numpy(), axis=1)[
-                :, np.newaxis
-            ]
-        )
-        if flag_transfom_latent != 0:
-            latent_transformed_normalized_enlarged = np.pad(
-                latent_transformed_normalized,
-                ((0, 0), (0, flag_transfom_latent)),
-                mode="constant",
-                constant_values=0,
-            )
-            flag_transfom_latent = 0
-        else:
-            latent_transformed_normalized_enlarged = latent_transformed_normalized
-
-        # Calculate the cosine similarity
-        cosine_similarity_original = np.sum(
-            latent_right_normalized * latent_left_normalized, axis=1
-        )
-        cosine_similarity_stitched_mod1 = np.sum(
-            latent_left_normalized * latent_transformed_normalized_enlarged, axis=1
-        )
-        cosine_similarity_stitched_mod2 = np.sum(
-            latent_right_normalized * latent_transformed_normalized_enlarged, axis=1
-        )
         # Decode latents
         decoded_transformed = model2.decode(transformed_latent_space).to(DEVICE).float()
         # Calculate reconstruction errors
         decoded_transformed_np = decoded_transformed.detach().cpu().numpy()
-        best_images_stitched = np.mean(
-            np.abs(decoded_transformed_np - images_np),
+        errors_by_image_stiched = np.mean(
+            np.abs(decoded_transformed_np - images_np) ** 2,
             axis=tuple(range(1, images.ndim)),
         )
-        mse_loss_per_image = np.mean(
-            (decoded_transformed_np - images_np) ** 2, axis=(1, 2, 3)
-        )
-
         # Get indices of top and bottom 5% Images
-        sorted_indices_stitched = np.argsort(best_images_stitched)
-        top_indices_stitched = sorted_indices_stitched[-num_top_indices:]
-        low_indices_stitched = sorted_indices_stitched[:num_top_indices]
-
-        # Latent differences (eh, this makes sense only if the latent sizes are the same)
-        latent_diff_stitched_mod1 = np.abs(
-            np.sum(latent_right.cpu().detach().numpy(), axis=1)
-            - np.sum(transformed_latent_space.cpu().detach().numpy(), axis=1)
-        )
-        latent_diff_stitched_mod2 = np.abs(
-            np.sum(latent_left.cpu().detach().numpy(), axis=1)
-            - np.sum(transformed_latent_space.cpu().detach().numpy(), axis=1)
-        )
+        sorted_indices_stitched = np.argsort(errors_by_image_stiched)
+        transformed_latent_space_np = transformed_latent_space.cpu().detach().numpy()
 
         # Record top and bottom indices information
-        for i in range(len(labels)):
-            (
-                model1_top,
-                model2_top,
-                stitched_top,
-                model1_low,
-                model2_low,
-                stitched_low,
-            ) = (False, False, False, False, False, False)
-            if i in top_indices_model1:
-                model1_top = True
-            if i in top_indices_model2:
-                model2_top = True
-            if i in top_indices_stitched:
-                stitched_top = True
-            if i in low_indices_model1:
-                model1_low = True
-            if i in low_indices_model2:
-                model2_low = True
-            if i in low_indices_stitched:
-                stitched_low = True
-
+        for i in range(n_classes):
+            indices = class_indices[i]
+            current_top_indices_model1 = top_indices_model1[i]
+            current_top_indices_model2 = top_indices_model2[i]
+            current_low_indices_model1 = low_indices_model1[i]
+            current_low_indices_model2 = low_indices_model2[i]
+            
+            filtered_indices = [idx for idx in sorted_indices_stitched if idx in indices]
+            top_indices_stitched = filtered_indices[-num_top_indices:]
+            low_indices_stitched = filtered_indices[:num_top_indices]
+            
+            model1_is_kept_top = np.mean([1 if i in current_top_indices_model1 else 0 for i in top_indices_stitched])*100
+            model1_is_kept_low = np.mean([1 if i in current_low_indices_model1 else 0 for i in low_indices_stitched])*100
+            model2_is_kept_top = np.mean([1 if i in current_top_indices_model2 else 0 for i in top_indices_stitched])*100
+            model2_is_kept_low = np.mean([1 if i in current_low_indices_model2 else 0 for i in low_indices_stitched])*100
+            
+            reconstruction_error_models_top = (errors_by_image_model_1[top_indices_stitched], errors_by_image_model_2[top_indices_stitched], errors_by_image_stiched[top_indices_stitched])
+            reconstruction_error_models_low = (errors_by_image_model_1[low_indices_stitched], errors_by_image_model_2[low_indices_stitched], errors_by_image_stiched[low_indices_stitched]) 
+            #analyze the distances of the top latent space
+            for attempt in range(3):
+                try:
+                    distance_latent_space_original_top = (np.linalg.norm(latent_left_np[top_indices_stitched] - latent_right_np[top_indices_stitched], axis=1))
+                    distance_latent_space_original_low = (np.linalg.norm(latent_left_np[low_indices_stitched] - latent_right_np[low_indices_stitched], axis=1))
+                    distance_latent_space_stitched_top = (np.linalg.norm(transformed_latent_space_np[top_indices_stitched] - latent_right_np[top_indices_stitched], axis=1))
+                    distance_latent_space_stitched_low = (np.linalg.norm(transformed_latent_space_np[low_indices_stitched] - latent_right_np[low_indices_stitched], axis=1))
+                    break
+                except ValueError:
+                    size = max(latent_left_np.shape[1], latent_right_np.shape[1], transformed_latent_space_np.shape[1])
+                    transformed_latent_space_np = np.pad(transformed_latent_space_np, ((0, 0), (0, size - transformed_latent_space_np.shape[1])), mode='constant', constant_values=0)
+                    latent_right_np = np.pad(latent_right_np, ((0, 0), (0, size - latent_right_np.shape[1])), mode='constant', constant_values=0)
+                    latent_left_np = np.pad(latent_left_np, ((0, 0), (0, size - latent_left_np.shape[1])), mode='constant', constant_values=0)
+                    
             results_top.append(
                 {
                     "dataset": name_dataset1,
                     "model1": file1,
                     "model2": file2,
+                    "class": indices_class[i],
                     "sampling_strategy": sampling_strategy,
                     "mapping": mapping_name,
                     "lambda": lamda_t,
                     "num_samples": num_samples,
-                    "reconstruction_error_model1": best_images_model1[i],
-                    "reconstruction_error_model2": best_images_model2[i],
-                    "reconstruction_error_stitched": best_images_stitched[i],
-                    "latent_diff_original": np.linalg.norm(latent_diff_original[i]),
-                    "latent_diff_mod1": np.linalg.norm(latent_diff_stitched_mod1[i]),
-                    "latent_diff_mod2": np.linalg.norm(latent_diff_stitched_mod2[i]),
-                    "class": indices_class[i],
-                    "model1_top": model1_top,
-                    "model2_top": model2_top,
-                    "stitched_top": stitched_top,
-                    "model1_low": model1_low,
-                    "model2_low": model2_low,
-                    "stitched_low": stitched_low,
-                    "cosine_similarity_original": cosine_similarity_original[i],
-                    "cosine_similarity_stitched_mod1": cosine_similarity_stitched_mod1[
-                        i
-                    ],
-                    "cosine_similarity_stitched_mod2": cosine_similarity_stitched_mod2[
-                        i
-                    ],
+                    "reconstruction_error_model1": np.mean(errors_by_image_model_1[indices]),
+                    "reconstruction_error_model2": np.mean(errors_by_image_model_2[indices]),
+                    "reconstruction_error_stitched": np.mean(errors_by_image_stiched[indices]),
+                    "model1_is_kept_top": model1_is_kept_top,
+                    "model1_is_kept_low": model1_is_kept_low,
+                    "model2_is_kept_top": model2_is_kept_top,
+                    "model2_is_kept_low": model2_is_kept_low,
+                    "distance_latent_space_original_top": [distance_latent_space_original_top],
+                    "distance_latent_space_original_low": [distance_latent_space_original_low],
+                    "distance_latent_space_stitched_top": [distance_latent_space_stitched_top],
+                    "distance_latent_space_stitched_low": [distance_latent_space_stitched_low],
+                    "reconstruction_error_models_top": reconstruction_error_models_top,
+                    "reconstruction_error_models_low": reconstruction_error_models_low,
                 }
             )
-
-        # Calculate class-wise MSE losses
-        for i in range(n_classes):
-            indices = class_indices[i]
-            mse_loss_class = criterion(
-                decoded_transformed[indices], images[indices]
-            ).item()
+            mean = np.mean(errors_by_image_stiched[indices])
+            variance = np.var(errors_by_image_stiched[indices])
+        
+            error_distribution.append(
+                {
+                    "model": file,
+                    "class": i,
+                    "parent_left_mean": mean_1[i],
+                    "parent_left_variance": variance_1[i],
+                    "parent_right_mean": mean_2[i],
+                    "parent_right_variance": variance_2[i],
+                    "mean": mean,
+                    "variance": variance,
+                })
+            # Calculate class-wise MSE losses
 
             results_list_classes.append(
                 {
@@ -474,17 +381,16 @@ def create_datasets(filters, directory_to_explore, current_dir):
                     "lambda": lamda_t,
                     "latent_dim": size_of_the_latent2,
                     "num_samples": num_samples,
-                    "MSE_loss": mse_loss_class,
-                    "MSE_loss_model1": mse_loss_model1[i],
-                    "MSE_loss_model2": mse_loss_model2[i],
+                    "MSE_loss": np.mean(errors_by_image_stiched[indices]),
+                    "MSE_loss_model1": np.mean(errors_by_image_model_1[indices]),
+                    "MSE_loss_model2": np.mean(errors_by_image_model_2[indices]),
                     "class": i,
                 }
             )
-            
+        del transformed_latent_space, decoded_transformed, decoded_transformed_np, errors_by_image_stiched, sorted_indices_stitched, transformed_latent_space_np, distance_latent_space_original_top, distance_latent_space_original_low, distance_latent_space_stitched_top, distance_latent_space_stitched_low
         if count%50 == 0:
-            print("dear god save me")
             results_top, results_list_classes, error_distribution = save_dataframes(
-                results_top, results_list_classes, error_distribution, "test_run"
+                results_top, results_list_classes, error_distribution, output_name=output_name
             )
         count += 1
     return results_top, results_list_classes, error_distribution
@@ -503,20 +409,25 @@ def main(cfg: DictConfig) -> None:
     """
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
     results_top_df, results_class_df, error_distribution_df = (
-        create_datasets(cfg.filters, cfg.directory_to_explore, cfg.path_to_test_file)
+        create_datasets(cfg.filters, cfg.directory_to_explore, cfg.path_to_test_file, cfg.output_name)
     )
+    
+    results_top_df = pd.DataFrame(results_top_df)
+    results_class_df = pd.DataFrame(results_class_df)
+    error_distribution_df = pd.DataFrame(error_distribution_df)
+    
     results_top_df.to_csv(
-        "results/transformations/calculations_databases/" + cfg.output_name + "_top.csv"
+        "results/transformations/calculations_databases/" + cfg.output_name + "_top.csv", mode="a", header=False, sep=";"
     )
     results_class_df.to_csv(
         "results/transformations/calculations_databases/"
         + cfg.output_name
-        + "_class.csv"
+        + "_class.csv", mode="a", header=False, sep=";"
     )
     error_distribution_df.to_csv(
         "results/transformations/calculations_databases/"
         + cfg.output_name
-        + "_error_distribution.csv"
+        + "_error_distribution.csv", mode="a", header=False, sep=";"
     )
 
 if __name__ == "__main__":
