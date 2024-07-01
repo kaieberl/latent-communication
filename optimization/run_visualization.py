@@ -72,13 +72,15 @@ def main(cfg: DictConfig):
     #Plot the results
     print(f"Mean error for {cfg.mapping} mapping: {np.mean(np.linalg.norm(latents2 - latents1_trafo, axis=1)):.4f}")
     cfg.storage_path = cfg.base_dir / "results/transformations/figures" / cfg.model1.name.upper()
+    if not cfg.storage_path.exists():
+        cfg.storage_path.mkdir(parents=True)
     visualize_latent_space(latents1, labels,
                            cfg.storage_path / f"latent_space_{cfg.visualization}_{cfg.model1.name}_{cfg.model1.seed}_test.png", mode=cfg.visualization)
     pca, _ = visualize_latent_space(latents2, labels,
                                     cfg.storage_path / f"latent_space_{cfg.visualization}_{cfg.model2.name}_{cfg.model2.seed}_test.png", mode=cfg.visualization)
     visualize_latent_space(latents1_trafo, labels,
                            cfg.storage_path / f"latent_space_{cfg.visualization}_{cfg.mapping}_{cfg.model1.name}_{cfg.model1.latent_size}_{cfg.model1.seed}_{cfg.model1.name}_{cfg.model2.latent_size}_{cfg.model2.seed}_test_{cfg.mapping}_{cfg.num_samples}.png",
-                           pca=pca)
+                           pca=pca, mode=cfg.visualization)
     errors = np.linalg.norm(latents2 - latents1_trafo, axis=1)
     if cfg.visualization == 'pca':
         latents2_2d = pca.transform(latents2)
