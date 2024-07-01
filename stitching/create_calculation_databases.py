@@ -185,6 +185,7 @@ def create_datasets(filters, directory_to_explore, current_dir, output_name):
     # Loop through files and process
     for file in iteration:
         file = file[:-4]
+        torch.no_grad()
         iteration.set_description(f"Processing {file}")
         data_info_1, data_info_2, trans_info = file.split(">")
         mean_1, variance_1, mean_2, variance_2 = [], [], [], []
@@ -214,7 +215,7 @@ def create_datasets(filters, directory_to_explore, current_dir, output_name):
                 latent_size=size_of_the_latent1,
                 seed=seed1,
                 model_path=file1,
-            ).to(DEVICE)
+            ).to(DEVICE).eval()
             latent_left = model1.get_latent_space(images).float()
             latent_left_np = latent_left.detach().cpu().numpy()
             decoded_left = model1.decode(latent_left).to(DEVICE).float()
@@ -245,7 +246,7 @@ def create_datasets(filters, directory_to_explore, current_dir, output_name):
                 latent_size=size_of_the_latent2,
                 seed=seed2,
                 model_path=file2,
-            ).to(DEVICE)
+            ).to(DEVICE).eval()
             latent_right = model2.get_latent_space(images).to(DEVICE).float()
             latent_right_np = latent_right.detach().cpu().numpy()
             decoded_right = model2.decode(latent_right).to(DEVICE).float()
