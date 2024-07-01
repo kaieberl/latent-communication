@@ -25,8 +25,7 @@ def get_stitched_output(model1, model2, mapping, images):
 
 
 def load_mapping(cfg):
-    name = f'{cfg.mapping}_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}_{cfg.num_samples}'
-    path = Path(cfg.base_dir) / 'results/transformations' / cfg.storage_path / name
+    path = cfg.base_dir / "results/transformations/mapping_files" / cfg.model1.name.upper() / f"{cfg.dataset.upper()}_{cfg.model1.name.upper()}_{cfg.model1.latent_size}_{cfg.model1.seed}>{cfg.dataset.upper()}_{cfg.model2.name.upper()}_{cfg.model2.latent_size}_{cfg.model2.seed}>{cfg.mapping}_{cfg.num_samples}_{cfg.lamda}_{'equally'}"
     if cfg.mapping == 'Linear':
         from optimization.optimizer import LinearFitting
         mapping = LinearFitting.from_file(path)

@@ -68,6 +68,12 @@ class LightningBaseModel(LightningModule, ABC):
         """
         pass
 
+    def reconstruction_loss(self, x: torch.Tensor, x_hat: torch.Tensor) -> torch.Tensor:
+        """
+        Calculates the reconstruction loss.
+        """
+        return nn.functional.mse_loss(x_hat, x)
+
 
 class BaseModel(nn.Module, ABC):
 

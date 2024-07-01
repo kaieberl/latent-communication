@@ -6,10 +6,13 @@ import torch
 from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
 import seaborn as sns
+from sklearn.manifold import TSNE
+
 
 def highlight_cluster(ax, df, target, alpha, cmap, norm, size=5):
     cluster_df = df[df["target"] == target]
     ax.scatter(cluster_df.x, cluster_df.y, c=cmap(norm(cluster_df["target"])), alpha=alpha, s=size)
+
 
 def plot_latent_space(ax, df, targets, size, cmap, norm, bg_alpha=1, alpha=1):
     ax.scatter(df.x, df.y, c=cmap(norm(df["target"])), alpha=bg_alpha, s=size)
@@ -17,7 +20,9 @@ def plot_latent_space(ax, df, targets, size, cmap, norm, bg_alpha=1, alpha=1):
         highlight_cluster(ax, df, target, alpha=alpha, size=size, cmap=cmap, norm=norm)
     return ax
 
-def visualize_latent_space_pca(latents, labels, fig_path=None, anchors=None, pca=None, size=10, bg_alpha=1, alpha=1, title=None, show_fig=True):
+
+def visualize_latent_space(latents, labels, fig_path=None, anchors=None, pca=None, size=10, bg_alpha=1, alpha=1,
+                           title=None, show_fig=True, mode='pca'):
     """
     Visualizes the 2D latent space obtained from PCA.
 
@@ -35,11 +40,15 @@ def visualize_latent_space_pca(latents, labels, fig_path=None, anchors=None, pca
         latents = latents.detach().cpu().numpy()
     if isinstance(labels, torch.Tensor):
         labels = labels.detach().cpu().numpy()
-    if pca is None:
-        pca = PCA(n_components=2)
-        latents_2d = pca.fit_transform(latents)
-    else:
-        latents_2d = pca.transform(latents)
+    if mode == 'pca':
+        if pca is None:
+            pca = PCA(n_components=2)
+            latents_2d = pca.fit_transform(latents)
+        else:
+            latents_2d = pca.transform(latents)
+    elif mode == 'tsne':
+        tsne = TSNE(n_components=2)
+        latents_2d = tsne.fit_transform(latents)
 
     # Normalize latents
     minimum = latents_2d.min(axis=0)
@@ -56,7 +65,8 @@ def visualize_latent_space_pca(latents, labels, fig_path=None, anchors=None, pca
     cmap = plt.get_cmap('tab10')
     norm = plt.Normalize(latent_df['target'].min(), latent_df['target'].max())
 
-    ax = plot_latent_space(ax, latent_df, targets=np.unique(labels), size=size, cmap=cmap, norm=norm, bg_alpha=bg_alpha, alpha=alpha)
+    ax = plot_latent_space(ax, latent_df, targets=np.unique(labels), size=size, cmap=cmap, norm=norm, bg_alpha=bg_alpha,
+                           alpha=alpha)
 
     if anchors is not None:
         # plot anchors with star marker
@@ -152,28 +162,30 @@ def visualize_results(cfg, labels, latents1, latents2):
     errors = np.linalg.norm(latents1 - latents2, axis=1)
 
     Path(cfg.storage_path).mkdir(parents=True, exist_ok=True)
-    pca, latents1_2d = visualize_latent_space_pca(latents1, labels,
-                                                  f"{cfg.storage_path}/latent_space_pca_{cfg.model2.name}_{cfg.model2.seed}.png", show_fig=False)
-    visualize_latent_space_pca(latents2, labels,
+    pca, latents1_2d = visualize_latent_space(latents1, labels,
+                                                  f"{cfg.storage_path}/latent_space_pca_{cfg.model2.name}_{cfg.model2.seed}.png",
+                                              show_fig=False)
+    visualize_latent_space(latents2, labels,
                                f"{cfg.storage_path}/latent_space_pca_{cfg.model1.name}_{cfg.model1.seed}_transformed.png",
-                               pca=pca, show_fig=False)
+                           pca=pca, show_fig=False)
     visualize_mapping_error(latents1_2d, errors,
-                            f"{cfg.storage_path}/mapping_error_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}.png", show_fig=False)
+                            f"{cfg.storage_path}/mapping_error_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}.png",
+                            show_fig=False)
     print(f"MSE: {np.mean(errors):.4f}")
     # plot_error_dist(errors, labels, f"{cfg.storage_path}/mapping_error_distribution_{cfg.model1.name}_{cfg.model1.seed}_{cfg.model2.name}_{cfg.model2.seed}.png")
 
 
 def visualize_modified_latent_space_pca(
-    latents_trans,
-    latents_2,
-    labels,
-    fig_path=None,
-    anchors=None,
-    pca=None,
-    size=10,
-    bg_alpha=1,
-    alpha=1,
-    title="2D PCA of Latent Space",
+        latents_trans,
+        latents_2,
+        labels,
+        fig_path=None,
+        anchors=None,
+        pca=None,
+        size=10,
+        bg_alpha=1,
+        alpha=1,
+        title="2D PCA of Latent Space",
 ):
     """
     Visualizes the 2D latent space obtained from PCA.
@@ -214,7 +226,7 @@ def visualize_modified_latent_space_pca(
 
     # Separate the two datasets
     latents_trans_2d = latents_2d[: len(latents_trans)]
-    latents_2_2d = latents_2d[len(latents_trans) :]
+    latents_2_2d = latents_2d[len(latents_trans):]
 
     # Create DataFrames for easy plotting
     latent_df_trans = pd.DataFrame(latents_trans_2d, columns=["x", "y"])
