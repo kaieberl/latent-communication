@@ -30,7 +30,10 @@ def load_model(model_name, model_path=None, in_channels=1, size=7, latent_size=8
         model = ResnetVAE(50, in_channels)
     elif model_name == 'pcktae':
         from models.definitions.PCKTAE import PocketAutoencoder
-        model = PocketAutoencoder(latent_size)
+        if model_path is None:
+            model = PocketAutoencoder(latent_size)
+        else:
+            model = PocketAutoencoder(path=model_path.split("/")[-1])
     elif model_name == "verysmall-ae":
         from models.definitions.ae_latentdim10 import VerySmallAutoencoder
         model = VerySmallAutoencoder()
