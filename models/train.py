@@ -89,13 +89,13 @@ def main(cfg):
     transformations = Compose(get_transformations(cfg.name))
     if cfg.dataset == "cifar10":
         data_module = CIFAR10DataModule(transformations)
-        model = load_model(cfg.name, in_channels=3, size=cfg.latent_size)
+        model = load_model(cfg.name, in_channels=3, latent_size=cfg.latent_size)
     elif cfg.dataset == "mnist":
         data_module = MNISTDataModule(transformations)
-        model = load_model(cfg.name, in_channels=1, size=cfg.latent_size)
+        model = load_model(cfg.name, in_channels=1, latent_size=cfg.latent_size)
     elif cfg.dataset == "fmnist":
         data_module = FMNISTDataModule(transformations)
-        model = load_model(cfg.name, in_channels=1, size=cfg.latent_size)
+        model = load_model(cfg.name, in_channels=1, latent_size=cfg.latent_size)
     else:
         raise ValueError(f"Unknown dataset: {cfg.dataset}")
     trainer = Trainer(max_epochs=cfg.epochs)
