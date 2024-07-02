@@ -19,12 +19,13 @@ device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
 hydra.core.global_hydra.GlobalHydra.instance().clear()
 
 
-def get_latents(cfg, test=False):
+def get_latents(cfg, val=False, test=False):
     """For both models, load the latent vectors if latent_path is provided, else load the models and sample the
         latent vectors.
 
     Args:
         cfg (DictConfig): Configuration dictionary
+        val (bool): If True, load the validation latent vectors
         test (bool): If True, load the test latent vectors
 
     Returns:
@@ -68,8 +69,12 @@ def get_latents(cfg, test=False):
                 else:
                     raise ValueError("Invalid dataset")
                 indices = []
-                for i in range(10):
-                    indices += torch.where(torch.tensor(dataset.targets) == i)[0][:cfg.num_samples // 10].tolist()
+                if not val:
+                    for i in range(10):
+                        indices += torch.where(torch.tensor(dataset.targets) == i)[0][:cfg.num_samples // 10].tolist()
+                else:
+                    for i in range(10):
+                        indices += torch.where(torch.tensor(dataset.targets) == i)[0][cfg.num_samples // 10:(cfg.num_samples + 5000) // 10].tolist()
                 dataloader = DataLoader(dataset, batch_size=cfg.num_samples, sampler=SubsetRandomSampler(indices))
                 latents[model_name], labels = model.get_latent_space_from_dataloader(dataloader)
     else:
@@ -95,7 +100,7 @@ def get_latents(cfg, test=False):
     return latents, labels
 
 
-def create_mapping(cfg, latents1, latents2, do_print=True):
+def create_mapping(cfg, latents1, latents2, val_latents1=None, val_latents2=None, do_print=True):
     if cfg.mapping == 'Linear':
         from optimization.optimizer import LinearFitting
         mapping = LinearFitting(latents1, latents2, lamda=cfg.lamda, do_print=do_print)
@@ -122,8 +127,9 @@ def main(cfg : DictConfig) -> None:
     cfg.model1.path = cfg.base_dir / "models/checkpoints" / f"{cfg.model1.name.upper()}/{cfg.dataset.upper()}/{cfg.dataset.upper()}_{cfg.model1.name.upper()}_{cfg.model1.latent_size}_{cfg.model1.seed}.pth"
     cfg.model2.path = cfg.base_dir / "models/checkpoints" / f"{cfg.model2.name.upper()}/{cfg.dataset.upper()}/{cfg.dataset.upper()}_{cfg.model2.name.upper()}_{cfg.model2.latent_size}_{cfg.model2.seed}.pth"
     latents1, latents2 = get_latents(cfg)[0].values()
+    # val_latents1, val_latents2 = get_latents(cfg, val=True)[0].values()
 
-    storage_path = cfg.base_dir / "results/transformations/mapping_files" / cfg.model1.name.upper() / f"{cfg.dataset.upper()}_{cfg.model1.name.upper()}_{cfg.model1.latent_size}_{cfg.model1.seed}>{cfg.dataset.upper()}_{cfg.model2.name.upper()}_{cfg.model2.latent_size}_{cfg.model2.seed}>{cfg.mapping}_{cfg.num_samples}_{cfg.lamda}_{'equally'}"
+    storage_path = cfg.base_dir / "results/transformations/mapping_files" / cfg.model1.name.upper() / f"{cfg.dataset.upper()}_{cfg.model1.name.upper()}_{cfg.model1.latent_size}_{cfg.model1.seed}>{cfg.dataset.upper()}_{cfg.model2.name.upper()}_{cfg.model2.latent_size}_{cfg.model2.seed}>{cfg.mapping}_{cfg.num_samples}_{cfg.lamda}_equally"
     if storage_path.exists():
         return
     mapping = create_mapping(cfg, latents1, latents2)
