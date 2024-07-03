@@ -5,8 +5,8 @@ This script creates the calculation databases for the transformations. It takes 
 the results of the models and calculates four different dataframes to then use for various visualizations. 
 The script is called from the command line and takes the following arguments:
     - directory_to_explore: The directory where the mapping files are stored.
-    - filters: The filters to apply to the files in the directory.
-    - output_name: The name of the output files.
+    - filters: The filters to apply to the files in the directory. They are separated by '.'.
+    - output_name: The name of the output files. BE SURE TO CHANGE IT FOR EACH RUN TO AVOID OVERWRITING FILES.
 """
 import os
 import sys
@@ -143,10 +143,9 @@ def create_old_datasets(directory_to_explore):
     return dataframe
     
 def criterion(prediction, images):
-    with torch.no_grad():  # No need to track gradients for this calculation
-        errors = nn.MSELoss(prediction, images, reduction='none')  # Shape: (batch_size, channels, height, width)
+    with torch.no_grad():
+        errors = nn.MSELoss(reduction='none')(prediction, images)  # Assign loss to 'errors'
         errors = torch.mean(errors, dim=(1, 2, 3))  # Average across channels and spatial dimensions
-        print(errors.shape)
         return errors
 
 def create_datasets(filters, directory_to_explore, current_dir, output_name):
@@ -171,7 +170,6 @@ def create_datasets(filters, directory_to_explore, current_dir, output_name):
 
 #    old_list = create_old_datasets(current_dir)
 
-    # Loss criterion
     list_va = [file for file in results_list_explore if all(x in file for x in filters)] # and not (old_list.isin([file]).any())]
     list_va = sorted(list_va)
     # Loopcount
@@ -256,7 +254,7 @@ def create_datasets(filters, directory_to_explore, current_dir, output_name):
             latent_right_np = latent_right.detach().cpu().numpy()
             decoded_right = model2.decode(latent_right).to(DEVICE).float()
             decoded_right_np = decoded_right.detach().cpu().numpy()
-            errors_by_image_model_2 = criterion(decoded_right - images).detach().cpu().numpy()
+            errors_by_image_model_2 = criterion(decoded_right, images).detach().cpu().numpy()
             #couple each error with its index
             sorted_indices_model2 = np.argsort(errors_by_image_model_2)
             
