@@ -108,6 +108,9 @@ def create_mapping(cfg, latents1, latents2, do_print=True):
     elif cfg.mapping == 'Kernel':
         from optimization.optimizer import KernelFitting
         mapping = KernelFitting(latents1, latents2, lamda=cfg.lamda, gamma=cfg.gamma, do_print=do_print)
+    elif cfg.mapping == 'Decouple':
+        from optimization.optimizer import DecoupleFitting
+        mapping = DecoupleFitting(latents1, latents2, lamda=cfg.lamda, do_print=do_print)
     else:
         raise ValueError("Invalid experiment name")
     return mapping

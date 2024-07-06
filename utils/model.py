@@ -28,7 +28,7 @@ def load_model(model_name, model_path=None, in_channels=1, size=7, latent_size=8
     elif model_name == 'resnet_vae':
         from models.definitions.resnet_vae import ResnetVAE
         model = ResnetVAE(50, in_channels)
-    elif model_name == 'pcktae':
+    elif model_name == 'pcktae' or model_name == 'pcktaeclass01234':
         from models.definitions.PCKTAE import PocketAutoencoder
         model = PocketAutoencoder(latent_size)
     elif model_name == "verysmall-ae":
@@ -81,7 +81,7 @@ def get_transformations(model_name):
             transforms.Resize((224, 224)),
             transforms.Lambda(lambda x: x.repeat(3, 1, 1))
         ]
-    elif model_name in ['ae', 'resnet_ae', 'resnet_vae', 'pcktae', 'verysmall-ae']:
+    elif model_name in ['ae', 'resnet_ae', 'resnet_vae', 'pcktae','pcktaeclass01234', 'verysmall-ae']:
         return [
             transforms.ToTensor()
         ]
