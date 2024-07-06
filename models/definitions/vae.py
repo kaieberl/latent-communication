@@ -1,10 +1,11 @@
-
 import torch
 import torch.nn as nn
-from models.definitions.base_model import BaseModel
+from models.definitions.base_model import BaseModel, LightningBaseModel
+
 
 class Encoder(nn.Module):
     """Encoder network that encodes the input space into a latent space."""
+
     def __init__(self, in_dim, latent_dim):
         """Initialize an Encoder module.
         
@@ -35,8 +36,10 @@ class Encoder(nn.Module):
         """
         return self.net(x)
 
+
 class Distribution(nn.Module):
     """Distribution network that predicts the mean and variance of the latent space."""
+
     def __init__(self, latent_dim):
         """Initialize a Distribution module.
         
@@ -58,8 +61,10 @@ class Distribution(nn.Module):
         """
         return self.mu(x), self.logvar(x)
 
+
 class Decoder(nn.Module):
     """Decoder network that decodes the latent space into the input space."""
+
     def __init__(self, out_dim, latent_dim):
         """Initialize a Decoder module.
         
@@ -90,14 +95,15 @@ class Decoder(nn.Module):
         """
         return self.net(x)
 
-class VAE(BaseModel):
-    def __init__(self, in_dim, latent_dim):
+
+class VAE(LightningBaseModel):
+    def __init__(self, in_dim, latent_dim, return_var=False):
         super(VAE, self).__init__()
         self.hidden_dim = latent_dim
         self.encoder = Encoder(in_dim, latent_dim)
         self.distribution = Distribution(latent_dim)
         self.decoder = Decoder(in_dim, latent_dim)
-        self.return_var = False
+        self.return_var = return_var
 
     def encode(self, x):
         """
@@ -107,7 +113,7 @@ class VAE(BaseModel):
         result = self.encoder(x)
         mu, log_var = self.distribution(result)
         return mu, log_var
-  
+
     def decode(self, z):
         """
         Decodes the latent space representation
@@ -157,4 +163,15 @@ class VAE(BaseModel):
         mu, log_var = self.encode(x)
         return self.reparameterize(mu, log_var)
 
-    
+    def configure_optimizers(self):
+        """
+        Define the optimizer for training.
+        """
+        return torch.optim.Adam(self.parameters(), lr=1e-3)
+
+    def training_step(self, batch, batch_idx):
+        x, _ = batch
+        x_reconst, mu, log_var = self.forward(x)
+        loss = self.loss_function(x, x_reconst, mu, log_var)
+        self.log('train_loss', loss)
+        return loss
