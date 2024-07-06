@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from optimization.base_optimizer import BaseOptimizer
 from optimization.mlp import MLP
+from optimization.affinemodel import AffineModel
 
 
 class AffineFitting(BaseOptimizer):
@@ -350,3 +351,102 @@ class KernelFitting(BaseOptimizer):
         """
         K_new = self.compute_kernel_matrix(z1)
         return K_new @ self.alpha.value
+
+
+
+class DecoupleFitting:
+    def __init__(self, z1, z2, lamda, learning_rate=0.01, epochs=200, do_print=True):
+        """
+        Initializes the DecoupleFitting class.
+
+        Parameters:
+            z1 (np.ndarray): Input data matrix of shape (n_samples, latent_dim1)
+           f z2 (np.ndarray): Output data matrix of shape (n_samples, latent_dim2)
+            lamda (float): Regularization parameter
+            learning_rate (float): Learning rate for the optimizer
+            epochs (int): Number of epochs to train the model
+            do_print (bool): Flag to print training progress
+        """
+        self.z1 = torch.tensor(z1, dtype=torch.float32)
+        self.z2 = torch.tensor(z2, dtype=torch.float32)
+        self.epochs = epochs
+        self.lamda = lamda
+        self.learning_rate = learning_rate
+        self.do_print = do_print
+
+        self.mapping = AffineModel(self.z1.shape[1], self.z2.shape[1], lamda, learning_rate)
+
+
+    def fit(self):
+        """
+        Trains the affine model.
+        """
+        trainer = Trainer(max_epochs=self.epochs)
+        trainer.fit(self.mapping, DataLoader(TensorDataset(self.z1, self.z2), batch_size=self.z1.size(0), shuffle=True))
+
+    def get_results(self):
+        """
+        Returns the results of the optimization problem.
+
+        Returns:
+            AffineModel: Trained model
+        """
+        return self.mapping.A1.detach().numpy(), self.mapping.A2.detach().numpy()
+
+    def save_results(self, path):
+        """
+        Saves the model parameters to a file.
+
+        Parameters:
+            path (str): Path to save the model parameters
+        """
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        torch.save(self.mapping.state_dict(), str(path) + '.pth')
+        print("Model saved at ", path)
+
+    def print_results(self):
+        """
+        Prints the results of the optimization problem.
+        """
+        print("A1:")
+        print(self.mapping.A1.detach().numpy())
+        print("A2:")
+        print(self.mapping.A2.detach().numpy())
+
+    def transform(self, z1):
+        """
+        Applies the trained model to new data.
+
+        Parameters:
+            z1 (np.ndarray or torch.Tensor): New input data matrix of shape (n_samples, latent_dim1)
+
+        Returns:
+            torch.Tensor: Transformed data matrix of shape (n_samples, latent_dim2)
+        """
+        self.mapping.eval()
+        if isinstance(z1, np.ndarray):
+            z1 = torch.tensor(z1, dtype=torch.float32)
+        with torch.no_grad():
+            z1_transformed = z1 @ self.mapping.A1.detach().T
+        return z1_transformed.detach().numpy()
+
+    @classmethod
+    def from_file(cls, path):
+        """
+        Loads the results of the optimization problem from a file.
+
+        Parameters:
+            path (str): Path to the file containing the results
+
+        Returns:
+            DecoupleFitting: Instance of the DecoupleFitting class with the loaded results
+        """
+        # Create a dummy instance to get the latent dimensions
+        dummy_instance = cls(np.empty((1, 1)), np.empty((1, 1)), 0, 0)
+        latent_dim1 = dummy_instance.z1.shape[1]
+        latent_dim2 = dummy_instance.z2.shape[1]
+
+        # Create an instance with the correct dimensions and load the state_dict
+        instance = cls(np.empty((1, latent_dim1)), np.empty((1, latent_dim2)), 0, 0)
+        instance.model.load_state_dict(torch.load(str(path) + '.pth'))
+        return instance
