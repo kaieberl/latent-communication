@@ -142,11 +142,15 @@ def create_old_datasets(directory_to_explore):
     dataframe = dataframe[['model1', 'model2','combined']].astype(str).agg('>'.join, axis=1)
     return dataframe
     
+    
 def criterion(prediction, images):
     with torch.no_grad():
         errors = nn.MSELoss(reduction='none')(prediction, images)  # Assign loss to 'errors'
+        print(errors.shape)
         errors = torch.mean(errors, dim=(1, 2, 3))  # Average across channels and spatial dimensions
+        print(errors.shape)
         return errors
+
 
 def create_datasets(filters, directory_to_explore, current_dir, output_name):
     """
@@ -170,7 +174,7 @@ def create_datasets(filters, directory_to_explore, current_dir, output_name):
 
 #    old_list = create_old_datasets(current_dir)
 
-    list_va = [file for file in results_list_explore if all(x in file for x in filters)] # and not (old_list.isin([file]).any())]
+    list_va = [file for file in results_list_explore if all(x in file for x in filters)]
     list_va = sorted(list_va)
     # Loopcount
     iteration = tqdm(list_va, desc="Processing files", position=0, leave=True)
