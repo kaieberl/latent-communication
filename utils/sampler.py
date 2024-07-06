@@ -147,7 +147,7 @@ def sample_furthest_away_images(n_samples, images, labels, model, batch_size=128
     return sampled_images, sampled_labels
 
 
-def sample_removing_outliers(n_samples, images, labels, model, batch_size=128, device='cpu'):
+def sample_removing_outliers(n_samples, images, labels, model, batch_size=128, device='cpu',seed = 0):
     model.eval()
     errors = []
    
@@ -172,7 +172,7 @@ def sample_removing_outliers(n_samples, images, labels, model, batch_size=128, d
         logging.info(f"Number of images without outliers is less than n_samples.")
         n_samples = len(filtered_outliers)
     filtered_outliers, filtered_outliers_labels =  torch.tensor(filtered_outliers), torch.tensor(filtered_outliers_labels)
-    images_sampled, labels_sampled = sample_equally_per_class_images(n_samples, filtered_outliers, filtered_outliers_labels, seed=0)
+    images_sampled, labels_sampled = sample_equally_per_class_images(n_samples, filtered_outliers, filtered_outliers_labels, seed=seed)
     return images_sampled, labels_sampled
 
 
