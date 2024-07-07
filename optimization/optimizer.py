@@ -354,7 +354,7 @@ class KernelFitting(BaseOptimizer):
 
 
 
-class DecoupleFitting:
+class DecoupleFitting(BaseOptimizer):
     def __init__(self, z1, z2, lamda, learning_rate=0.01, epochs=200, do_print=True):
         """
         Initializes the DecoupleFitting class.
@@ -369,6 +369,8 @@ class DecoupleFitting:
         """
         self.z1 = torch.tensor(z1, dtype=torch.float32)
         self.z2 = torch.tensor(z2, dtype=torch.float32)
+        self.latentdim1 = self.z1.shape[1],
+        self.latentdim2 = self.z2.shape[1]
         self.epochs = epochs
         self.lamda = lamda
         self.learning_rate = learning_rate
@@ -423,12 +425,12 @@ class DecoupleFitting:
         Returns:
             torch.Tensor: Transformed data matrix of shape (n_samples, latent_dim2)
         """
-        self.mapping.eval()
+        #self.mapping.eval()
         if isinstance(z1, np.ndarray):
             z1 = torch.tensor(z1, dtype=torch.float32)
         with torch.no_grad():
             z1_transformed = z1 @ self.mapping.A1.detach().T
-        return z1_transformed.detach().numpy()
+        return z1_transformed
 
     @classmethod
     def from_file(cls, path):
@@ -441,12 +443,17 @@ class DecoupleFitting:
         Returns:
             DecoupleFitting: Instance of the DecoupleFitting class with the loaded results
         """
-        # Create a dummy instance to get the latent dimensions
-        dummy_instance = cls(np.empty((1, 1)), np.empty((1, 1)), 0, 0)
-        latent_dim1 = dummy_instance.z1.shape[1]
-        latent_dim2 = dummy_instance.z2.shape[1]
-
+        instance = cls(np.empty((1, 1)), np.empty((1, 1)), 0, 0)
         # Create an instance with the correct dimensions and load the state_dict
-        instance = cls(np.empty((1, latent_dim1)), np.empty((1, latent_dim2)), 0, 0)
-        instance.model.load_state_dict(torch.load(str(path) + '.pth'))
+        model_state_dict = torch.load(str(path) + '.pth')
+
+        # Create a new instance of AffineModel with the correct dimensions
+        latent_dim1 = model_state_dict['A1'].size(1)  # get latent_dim1 from A1
+        latent_dim2 = model_state_dict['A1'].size(0)  # get latent_dim2 from A1
+        lamda = model_state_dict.get('lamda', 0)  # get lambda from model_state_dict or default to 0
+        learning_rate = model_state_dict.get('learning_rate', 0.01)  # get learning_rate from model_state_dict or default to 0.01
+
+        instance.mapping = AffineModel(latent_dim1, latent_dim2, lamda, learning_rate)
+        instance.mapping.load_state_dict(model_state_dict)
+
         return instance
