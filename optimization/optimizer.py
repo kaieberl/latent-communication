@@ -59,6 +59,8 @@ class AffineFitting(BaseOptimizer):
         print("Optimal value: ", opt_value)
         print(A_aff_opt)
         print(b_aff_opt)
+        print("A_aff size: ", A_aff_opt.shape)
+        print("b_aff size: ", b_aff_opt.shape)
 
     def save_results(self, path):
         # As numpy arrays
@@ -93,6 +95,8 @@ class AffineFitting(BaseOptimizer):
         instance = cls(np.zeros((1, latent_dim1)), np.zeros((1, latent_dim2)), 0)
         instance.A_aff = cp.Parameter((latent_dim2, latent_dim1), value=A)
         instance.b_aff = cp.Parameter(latent_dim2, value=b)
+        
+        instance.problem = cp.Problem(cp.Minimize(instance.define_loss()))
         return instance
 
 
