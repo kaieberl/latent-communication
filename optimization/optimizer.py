@@ -387,8 +387,10 @@ class DecoupleFitting(BaseOptimizer):
         """
         Trains the affine model.
         """
-        trainer = Trainer(max_epochs=self.epochs)
+
+        trainer = Trainer(max_epochs=self.epochs, enable_progress_bar=False, logger = False)
         trainer.fit(self.mapping, DataLoader(TensorDataset(self.z1, self.z2), batch_size=self.z1.size(0), shuffle=True))
+
 
     def get_results(self):
         """
