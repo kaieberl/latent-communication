@@ -563,7 +563,10 @@ class DecoupleFitting(BaseOptimizer):
         if isinstance(z1, np.ndarray):
             z1 = torch.tensor(z1, dtype=torch.float32)
         with torch.no_grad():
-            z1_transformed = z1 @ self.mapping.A1.detach().T
+            if self.mapping_type == "Linear":
+                z1_transformed = z1 @ self.mapping.A1.detach().T
+            elif self.mapping_type == "Affine":
+                z1_transformed = z1 @ self.mapping.A1.detach().T + self.mapping.b1.detach()
         return z1_transformed
 
     @classmethod
