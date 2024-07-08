@@ -442,7 +442,7 @@ class DecoupleFitting(BaseOptimizer):
         return z1_transformed
 
     @classmethod
-    def from_file(cls, path):
+    def from_file(cls, path,mapping_type="Linear"):
         """
         Loads the results of the optimization problem from a file.
 
@@ -461,8 +461,10 @@ class DecoupleFitting(BaseOptimizer):
         latent_dim2 = model_state_dict['A1'].size(0)  # get latent_dim2 from A1
         lamda = model_state_dict.get('lamda', 0)  # get lambda from model_state_dict or default to 0
         learning_rate = model_state_dict.get('learning_rate', 0.01)  # get learning_rate from model_state_dict or default to 0.01
-
-        instance.mapping = AffineModel(latent_dim1, latent_dim2, lamda, learning_rate)
-        instance.mapping.load_state_dict(model_state_dict)
-
+        if mapping_type == "Linear":
+            instance.mapping = LinearModel(latent_dim1, latent_dim2, lamda, learning_rate)
+            instance.mapping.load_state_dict(model_state_dict)
+        elif mapping_type == "Affine":
+            instance.mapping = AffineModel(latent_dim1, latent_dim2, lamda, learning_rate)
+            instance.mapping.load_state_dict(model_state_dict)
         return instance

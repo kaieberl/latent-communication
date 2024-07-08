@@ -8,9 +8,12 @@ def load_mapping(path,mapping):
     elif mapping.lower() == 'neuralnetwork':
         from optimization.optimizer import NeuralNetworkFitting
         mapping = NeuralNetworkFitting.from_file(path)
-    elif mapping.lower() == 'decouple' or mapping.lower() == 'decoupleaffine':
+    elif mapping.lower() == 'decouple':
         from optimization.optimizer import DecoupleFitting
         mapping = DecoupleFitting.from_file(path)
+    elif mapping.lower() == 'decoupleaffine':
+        from optimization.optimizer import DecoupleFitting
+        mapping = DecoupleFitting.from_file(path,"Affine")
     else:
         raise ValueError("Invalid experiment name")
     return mapping
