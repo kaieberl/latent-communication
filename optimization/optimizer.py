@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from optimization.base_optimizer import BaseOptimizer
 from optimization.mlp import MLP
-from optimization.affinemodel import AffineModel
+from optimization.model_decouple import AffineModel,LinearModel
 
 
 class AffineFitting(BaseOptimizer):
@@ -359,7 +359,7 @@ class KernelFitting(BaseOptimizer):
 
 
 class DecoupleFitting(BaseOptimizer):
-    def __init__(self, z1, z2, lamda, learning_rate=0.01, epochs=200, do_print=True):
+    def __init__(self, z1, z2, lamda, learning_rate=0.01, epochs=200, do_print=True,mapping_type ="Linear"):
         """
         Initializes the DecoupleFitting class.
 
@@ -379,9 +379,12 @@ class DecoupleFitting(BaseOptimizer):
         self.lamda = lamda
         self.learning_rate = learning_rate
         self.do_print = do_print
-
-        self.mapping = AffineModel(self.z1.shape[1], self.z2.shape[1], lamda, learning_rate)
-
+        if mapping_type == "Linear":
+            self.mapping = LinearModel(self.z1.shape[1], self.z2.shape[1], lamda, learning_rate)
+        elif mapping_type == "Affine":
+            self.mapping = AffineModel(self.z1.shape[1], self.z2.shape[1], lamda, learning_rate)
+        else:
+            raise ValueError(f"Mapping type {mapping_type} not recognized")
 
     def fit(self):
         """
