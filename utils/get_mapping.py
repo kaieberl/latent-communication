@@ -8,7 +8,7 @@ def load_mapping(path,mapping):
     elif mapping.lower() == 'neuralnetwork':
         from optimization.optimizer import NeuralNetworkFitting
         mapping = NeuralNetworkFitting.from_file(path)
-    elif mapping == 'decouple':
+    elif mapping.lower() == 'decouple':
         from optimization.optimizer import DecoupleFitting
         mapping = DecoupleFitting.from_file(path)
     else:
