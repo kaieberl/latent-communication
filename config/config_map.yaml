@@ -1,9 +1,10 @@
-mapping: NeuralNetwork
-lamda: 0.01
-num_samples: 10
-hidden_size: 16
-learning_rate: 0.008
-epochs: 20
+mapping: Affine
+sampling: equally
+lamda: 0
+num_samples: 200
+hidden_size: 128
+learning_rate: 0.004
+epochs: 100
 dataset: fmnist
 base_dir: .
 storage_path: .
@@ -17,7 +18,4 @@ model2:
   name: vae
   latent_size: 8
   path: .
-output_name: VAE
-directory_to_explore: results/transformations/mapping_files/${output_name}
-filters: ${output_name}.convex
 visualization: pca
