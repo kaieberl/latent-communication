@@ -1,3 +1,6 @@
+import hashlib
+import os
+
 import numpy as np
 import torch
 from utils.dataloaders.full_dataloaders import DataLoaderMNIST
@@ -12,7 +15,6 @@ from sklearn.decomposition import PCA
 import random
 from scipy.spatial.distance import cdist
 from scipy.spatial import ConvexHull
-
 
 
 def simple_sampler(indices, model, transformations, device, seed=10):
@@ -64,6 +66,69 @@ def get_latents(images, model, device="cpu"):
     return torch.stack(latents)
 
 
+def get_model_hash(model):
+    """Generate a hash for the given model."""
+    model_string = str(model.state_dict())
+    return hashlib.md5(model_string.encode()).hexdigest()
+
+
+def sample_convex_hull(dataloader, model, train_samples, val_samples=5000):
+    """Get train samples from convex hull, validation samples uniformly sampled.
+    Samples are stored for each model and only re-calculated for unknown models.
+    """
+    model_hash = get_model_hash(model)
+    filename = f"latents_{model_hash}.pt"
+    if os.path.exists(filename):
+        data = torch.load(filename)
+        latents, labels = data['latents'], data['labels']
+    else:
+        model.eval()
+        latents = []
+        labels = []
+        for images, targets in dataloader:
+            images = images.to(model.device)
+            latents_batch = model.get_latent_space(images).detach()
+            latents.append(latents_batch)
+            labels.append(targets)
+        latents = torch.cat(latents, dim=0)
+        labels = torch.cat(labels, dim=0)
+        # torch.save({'latents': latents, 'labels': labels}, filename)
+
+    n_samples_per_class = train_samples // 10
+    pca = PCA(n_components=3)
+    latents_reduced = pca.fit_transform(latents.detach().cpu().numpy())
+    convex_hull = ConvexHull(latents_reduced)
+    print(f"{len(convex_hull.vertices)} vertices in the convex hull.")
+    train_indices = []
+    for class_idx in range(10):
+        class_indices = np.where(labels.cpu().numpy() == class_idx)[0]
+        hull_indices = [idx for idx in convex_hull.vertices if idx in class_indices]
+
+        if len(hull_indices) >= n_samples_per_class:
+            selected_indices = np.random.choice(hull_indices, n_samples_per_class, replace=False)
+        else:
+            additional_indices = np.setdiff1d(class_indices, hull_indices)
+            additional_samples_needed = n_samples_per_class - len(hull_indices)
+            selected_additional_indices = np.random.choice(additional_indices, additional_samples_needed, replace=False)
+            selected_indices = np.concatenate([hull_indices, selected_additional_indices])
+
+        train_indices.extend(selected_indices)
+
+    train_indices = np.array(train_indices)
+    all_indices = np.arange(len(labels))
+    remaining_indices = np.setdiff1d(all_indices, train_indices)
+    val_indices = np.random.choice(remaining_indices, val_samples, replace=False)
+
+    return train_indices, latents[train_indices], labels[train_indices], val_indices, latents[val_indices], labels[val_indices]
+
+
+def sample_uncertainty(dataloader, model, mapping):
+    """Get training samples that have highest uncertainty, validation samples uniformly sampled.
+    """
+    model.eval()
+    uncertainty = mapping.get_uncertainty()
+
+
 def sample_convex_hulls_images(n_samples, images, labels, model, seed=0, device="cpu", pca_components=3):
     model.eval()
 
@@ -74,28 +139,29 @@ def sample_convex_hulls_images(n_samples, images, labels, model, seed=0, device=
             image_label_dict[label] = []
         latent = model.get_latent_space(image.unsqueeze(0).to(device)).detach().cpu().numpy()
         image_label_dict[label].append((image, latent))
-    
+
     n_per_class = math.ceil(n_samples / len(image_label_dict))
     images_sampled = []
     labels_sampled = []
     remaining_samples = 0
     np.random.seed(seed)
-    
+
     for class_name, data in image_label_dict.items():
         images_class, latents_class = zip(*data)
         latents_class = np.array(latents_class).squeeze()  # Squeeze to remove extra dimensions if any
         pca = PCA(n_components=pca_components)
         latents_class_reduced = pca.fit_transform(latents_class)
-        
+
         if len(latents_class_reduced) > 2:  # ConvexHull requires at least 3 points
             convex_hull = ConvexHull(latents_class_reduced)
             vertices = convex_hull.vertices
-            
+
             if len(vertices) >= n_per_class:
                 indices = np.random.choice(vertices, n_per_class, replace=False)
                 selected_images = [images_class[idx] for idx in indices]
             else:
-                logging.info(f"Class {class_name} has less vertices than {n_per_class} samples in the convex hull. Sampling randomly.")
+                logging.info(
+                    f"Class {class_name} has less vertices than {n_per_class} samples in the convex hull. Sampling randomly.")
                 selected_images = [images_class[idx] for idx in vertices]
                 remaining_samples += n_per_class - len(selected_images)
         else:
@@ -103,10 +169,10 @@ def sample_convex_hulls_images(n_samples, images, labels, model, seed=0, device=
             indices = np.random.choice(len(images_class), n_per_class, replace=False)
             selected_images = [images_class[idx] for idx in indices]
             remaining_samples += n_per_class - len(selected_images)
-        
+
         images_sampled.extend(selected_images)
         labels_sampled.extend([class_name] * len(selected_images))
-    
+
     if remaining_samples > 0:
         logging.info(f"Remaining samples: {remaining_samples}")
         remaining_images, remaining_labels = sample_equally_per_class_images(remaining_samples, images, labels, seed)
@@ -115,22 +181,22 @@ def sample_convex_hulls_images(n_samples, images, labels, model, seed=0, device=
 
     return torch.stack(images_sampled), torch.tensor(labels_sampled)
 
-def sample_furthest_away_images(n_samples, images, labels, model, batch_size=128, device='cpu'):
 
+def sample_furthest_away_images(n_samples, images, labels, model, batch_size=128, device='cpu'):
     # Compute latent representations in batches
     latents = []
     for i in range(0, len(images), batch_size):
-        batch_images = images[i:i+batch_size].to(device)
+        batch_images = images[i:i + batch_size].to(device)
         batch_latents = model.get_latent_space(batch_images).detach().cpu().numpy()
         latents.append(batch_latents)
-    
+
     # Concatenate latent representations from batches
     latents = np.concatenate(latents, axis=0)
-    
+
     # Randomly select the first point
     first_point_index = random.randint(0, len(latents) - 1)
     sampled_indices = [first_point_index]
-    
+
     # Iteratively select the next point that maximizes the minimum distance to the already selected points
     for _ in range(1, n_samples):
         remaining_indices = np.setdiff1d(np.arange(len(latents)), sampled_indices)
@@ -140,23 +206,21 @@ def sample_furthest_away_images(n_samples, images, labels, model, batch_size=128
             max_distances.append(np.min(distances))
         next_point_index = remaining_indices[np.argmax(max_distances)]
         sampled_indices.append(next_point_index)
-    
+
     # Return the sampled images, labels, and their indices
     sampled_images = images[sampled_indices]
     sampled_labels = labels[sampled_indices]
     return sampled_images, sampled_labels
 
 
-def sample_removing_outliers(n_samples, images, labels, model, batch_size=128, device='cpu',seed = 0):
+def sample_removing_outliers(n_samples, images, labels, model, batch_size=128, device='cpu'):
     model.eval()
     errors = []
-   
-    for image in images:
 
+    for image in images:
         image = image.to(device)
 
         x = model(image.unsqueeze(0))
-            
 
         error = F.mse_loss(x, image.unsqueeze(0)).item()
         errors.append(error)
@@ -165,16 +229,18 @@ def sample_removing_outliers(n_samples, images, labels, model, batch_size=128, d
     images = images.detach().cpu().numpy()
     labels = labels.detach().cpu().numpy()
     ## exclude outliers
-    filtered_data = [(image, label) for n, (image, label) in enumerate(zip(images, labels)) if errors[n] < variance_error/2 + mean_error]
+    filtered_data = [(image, label) for n, (image, label) in enumerate(zip(images, labels)) if
+                     errors[n] < variance_error / 2 + mean_error]
     filtered_outliers = [image for image, label in filtered_data]
     filtered_outliers_labels = [label for image, label in filtered_data]
     if len(filtered_outliers) < n_samples:
         logging.info(f"Number of images without outliers is less than n_samples.")
         n_samples = len(filtered_outliers)
-    filtered_outliers, filtered_outliers_labels =  torch.tensor(filtered_outliers), torch.tensor(filtered_outliers_labels)
-    images_sampled, labels_sampled = sample_equally_per_class_images(n_samples, filtered_outliers, filtered_outliers_labels, seed=seed)
+    filtered_outliers, filtered_outliers_labels = torch.tensor(filtered_outliers), torch.tensor(
+        filtered_outliers_labels)
+    images_sampled, labels_sampled = sample_equally_per_class_images(n_samples, filtered_outliers,
+                                                                     filtered_outliers_labels, seed=0)
     return images_sampled, labels_sampled
-
 
 
 def sample_equally_per_class_images(n_samples, images, labels, seed=0):
@@ -197,6 +263,7 @@ def sample_equally_per_class_images(n_samples, images, labels, seed=0):
         indices_sampled.extend([label_to_indices[label][i] for i in indices])
 
     return torch.stack(images_sampled), torch.tensor(labels_sampled)
+
 
 def sample_with_half_worst_classes_images(n_samples, images, labels, model, loss_fun=F.mse_loss, device="cpu", seed=0):
     label_to_images = {label.item(): [] for label in torch.unique(labels)}
@@ -233,12 +300,12 @@ def sample_with_half_worst_classes_images(n_samples, images, labels, model, loss
 
 
 def sample_equally_per_class(
-    n_samples,
-    data_loader,
-    batch_size=128,
-    transformations=[],
-    seed=0,
-    using_latents=False,
+        n_samples,
+        data_loader,
+        batch_size=128,
+        transformations=[],
+        seed=0,
+        using_latents=False,
 ):
     ## be careful with sampling from two latent spaces
 
@@ -261,14 +328,14 @@ def sample_equally_per_class(
 
 
 def sample_with_half_best_classes(
-    n_samples,
-    model,
-    data_loader,
-    batch_size=128,
-    transformations=[],
-    seed=0,
-    loss_fun=F.mse_loss,
-    device="cpu",
+        n_samples,
+        model,
+        data_loader,
+        batch_size=128,
+        transformations=[],
+        seed=0,
+        loss_fun=F.mse_loss,
+        device="cpu",
 ):
     dataset, labels = collect_dataset(data_loader, batch_size, transformations, seed)
     label_to_images = {label.item(): [] for label in torch.unique(labels)}
@@ -283,8 +350,8 @@ def sample_with_half_best_classes(
         losses_by_class[label].append(loss)
 
     best_classes = sorted(losses_by_class, key=lambda x: np.mean(losses_by_class[x]))[
-        len(losses_by_class) // 2 :
-    ]
+                   len(losses_by_class) // 2:
+                   ]
 
     label_to_images = {k: v for k, v in label_to_images.items() if k in best_classes}
     n_per_class = n_samples // len(label_to_images)
@@ -300,14 +367,14 @@ def sample_with_half_best_classes(
 
 
 def sample_with_half_worst_classes(
-    n_samples,
-    model,
-    data_loader,
-    batch_size=128,
-    transformations=[],
-    seed=0,
-    loss_fun=F.mse_loss,
-    device="cpu",
+        n_samples,
+        model,
+        data_loader,
+        batch_size=128,
+        transformations=[],
+        seed=0,
+        loss_fun=F.mse_loss,
+        device="cpu",
 ):
     dataset, labels = collect_dataset(data_loader, batch_size, transformations, seed)
     label_to_images = {label.item(): [] for label in torch.unique(labels)}
@@ -322,8 +389,8 @@ def sample_with_half_worst_classes(
         losses_by_class[label].append(loss)
 
     worst_classes = sorted(losses_by_class, key=lambda x: np.mean(losses_by_class[x]))[
-        : len(losses_by_class) // 2
-    ]
+                    : len(losses_by_class) // 2
+                    ]
 
     label_to_images = {k: v for k, v in label_to_images.items() if k in worst_classes}
     n_per_class = n_samples // len(label_to_images)

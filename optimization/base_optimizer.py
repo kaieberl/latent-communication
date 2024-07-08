@@ -56,8 +56,7 @@ class BaseOptimizer:
         """
         pass
 
-
-    @abstractmethod    
+    @abstractmethod
     def save_results(self, path):
         """
         Saves the results of the optimization problem.
@@ -67,7 +66,7 @@ class BaseOptimizer:
         """
         pass
 
-    @abstractmethod    
+    @abstractmethod
     def print_results(self):
         """
         Prints the results of the optimization problem.

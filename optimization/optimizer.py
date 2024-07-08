@@ -4,9 +4,12 @@ import numpy as np
 import cvxpy as cp
 import torch
 from lightning import Trainer
+from lightning.pytorch.callbacks import EarlyStopping
 from torch.utils.data import DataLoader, TensorDataset
+from lightning.pytorch import loggers as pl_loggers
 
 from optimization.base_optimizer import BaseOptimizer
+from optimization.bayesian_linear import BayesianLinearRegression
 from optimization.mlp import MLP
 from optimization.model_decouple import AffineModel,LinearModel
 
@@ -33,8 +36,11 @@ class AffineFitting(BaseOptimizer):
         Defines the loss function for the affine fitting problem.
         """
         n_samples = self.z1.shape[0]
-        residuals = [self.A_aff @ self.z1[i] + self.b_aff - self.z2[i] for i in range(n_samples)]
-        loss_aff = cp.norm2(cp.vstack(residuals))**2 + self.lamda * cp.norm(self.A_aff, 'fro')**2
+        dropout_rate = 0.05
+        dropout_mask = np.random.binomial(1, 1 - dropout_rate, size=self.z1.shape)
+        z1_dropout = self.z1 * dropout_mask
+        residuals = [self.A_aff @ z1_dropout[i] + self.b_aff - self.z2[i] for i in range(n_samples)]
+        loss_aff = cp.norm2(cp.vstack(residuals)) ** 2 + self.lamda * cp.norm(self.A_aff, 'fro') ** 2
         return loss_aff
 
     def get_results(self):
@@ -95,7 +101,7 @@ class AffineFitting(BaseOptimizer):
         instance = cls(np.zeros((1, latent_dim1)), np.zeros((1, latent_dim2)), 0)
         instance.A_aff = cp.Parameter((latent_dim2, latent_dim1), value=A)
         instance.b_aff = cp.Parameter(latent_dim2, value=b)
-        
+
         instance.problem = cp.Problem(cp.Minimize(instance.define_loss()))
         return instance
 
@@ -122,7 +128,7 @@ class LinearFitting(BaseOptimizer):
         """
         n_samples = self.z1.shape[0]
         residuals = [self.A @ self.z1[i] - self.z2[i] for i in range(n_samples)]
-        loss = cp.norm2(cp.vstack(residuals))**2 + self.lamda * cp.norm(self.A, 'fro')**2
+        loss = cp.norm2(cp.vstack(residuals)) ** 2 + self.lamda * cp.norm(self.A, 'fro') ** 2
         return loss
 
     def get_results(self):
@@ -177,7 +183,8 @@ class LinearFitting(BaseOptimizer):
 
 
 class NeuralNetworkFitting(BaseOptimizer):
-    def __init__(self, z1, z2, hidden_dim, lamda, learning_rate=0.01, epochs=100, do_print=True):
+    def __init__(self, z1, z2, hidden_dim, lamda, z1_val=None, z2_val=None, learning_rate=0.01, epochs=100,
+                 do_print=True):
         """
         Defines a neural network mapping between two latent spaces. Uses the MLP model.
 
@@ -197,6 +204,10 @@ class NeuralNetworkFitting(BaseOptimizer):
         self.z2 = torch.tensor(z2, dtype=torch.float32)
         self.do_print = do_print
 
+        if z1_val is not None:
+            self.z1_val = torch.from_numpy(z1_val) if isinstance(z1_val, np.ndarray) else z1_val
+            self.z2_val = torch.from_numpy(z2_val) if isinstance(z2_val, np.ndarray) else z2_val
+
     def define_loss(self):
         """
         Defines the loss function for the neural network fitting problem.
@@ -205,10 +216,17 @@ class NeuralNetworkFitting(BaseOptimizer):
 
     def fit(self):
         """
-        Trains the neural network model.
+        Trains the neural network model using early stopping.
         """
-        trainer = Trainer(max_epochs=self.epochs)
-        trainer.fit(self.model, DataLoader(TensorDataset(self.z1, self.z2), batch_size=self.z1.size(0), shuffle=True))
+        tb_logger = pl_loggers.TensorBoardLogger(save_dir="logs/")
+        trainer = Trainer(max_epochs=self.epochs, min_epochs=self.epochs // 2, logger=tb_logger, log_every_n_steps=1,
+                          callbacks=[EarlyStopping(monitor="val_loss", mode="min", patience=10)])
+        train_loader = DataLoader(TensorDataset(self.z1, self.z2), batch_size=self.z1.size(0), shuffle=True)
+        val_loader = None
+        if self.z1_val is not None:
+            val_loader = DataLoader(TensorDataset(self.z1_val, self.z2_val), batch_size=self.z1_val.size(0),
+                                    shuffle=False)
+        trainer.fit(self.model, train_loader, val_loader)
 
     def get_results(self):
         """
@@ -305,7 +323,7 @@ class KernelFitting(BaseOptimizer):
         """
         if isinstance(z, torch.Tensor):
             z = z.detach().cpu().numpy()
-        sq_dists = np.sum(z**2, axis=1).reshape(-1, 1) + np.sum(z**2, axis=1) - 2 * np.dot(z, z.T)
+        sq_dists = np.sum(z ** 2, axis=1).reshape(-1, 1) + np.sum(z ** 2, axis=1) - 2 * np.dot(z, z.T)
         K = np.exp(-self.gamma * sq_dists)
         return K
 
@@ -314,7 +332,7 @@ class KernelFitting(BaseOptimizer):
         Defines the loss function for the kernel fitting problem.
         """
         residuals = self.K @ self.alpha - self.z2
-        loss = cp.norm(residuals, 'fro')**2 + self.lamda * cp.norm(self.alpha, 'fro')**2
+        loss = cp.norm(residuals, 'fro') ** 2 + self.lamda * cp.norm(self.alpha, 'fro') ** 2
         return loss
 
     def solve(self):
@@ -355,6 +373,113 @@ class KernelFitting(BaseOptimizer):
         """
         K_new = self.compute_kernel_matrix(z1)
         return K_new @ self.alpha.value
+
+
+class AdaptiveFitting(BaseOptimizer):
+    def __init__(self, z1, z2, hidden_dim, lamda, z1_val=None, z2_val=None, learning_rate=0.001):
+        """
+        AdaptiveFitting trains a bayesian linear model and based on the uncertainty, chooses either a linear or MLP mapping.
+
+        Parameters:
+            z1 (np.ndarray): Input data matrix of shape (n_samples, 32)
+            z2 (np.ndarray): Output data matrix of shape (n_samples, 32)
+        """
+        super().__init__(z1, z2)
+        self.linear_model = BayesianLinearRegression(self.latent_dim1, self.latent_dim2, 0.004, lamda)
+        self.mlp_model = MLP(self.latent_dim1, hidden_dim, self.latent_dim2, learning_rate, lamda)
+
+        self.z1 = torch.from_numpy(z1) if isinstance(z1, np.ndarray) else z1
+        self.z2 = torch.from_numpy(z2) if isinstance(z2, np.ndarray) else z2
+
+        if z1_val is not None:
+            self.z1_val = torch.from_numpy(z1_val) if isinstance(z1_val, np.ndarray) else z1_val
+            self.z2_val = torch.from_numpy(z2_val) if isinstance(z2_val, np.ndarray) else z2_val
+
+    def define_loss(self):
+        pass
+
+    def fit(self):
+        """
+        Solves the optimization problem.
+        """
+        train_loader = DataLoader(TensorDataset(self.z1, self.z2), batch_size=self.z1.size(0), shuffle=True)
+        val_loader = None
+        if self.z1_val is not None:
+            val_loader = DataLoader(TensorDataset(self.z1_val, self.z2_val), batch_size=self.z1_val.size(0),
+                                    shuffle=False)
+        trainer = Trainer(max_epochs=1000, callbacks=[EarlyStopping(monitor="val_loss", mode="min", patience=100)])
+        trainer.fit(self.linear_model, train_loader, val_loader)
+
+        # trainer = Trainer(max_epochs=100, callbacks=[EarlyStopping(monitor="val_loss", mode="min", patience=20)])
+        # trainer.fit(self.mlp_model, train_loader, val_loader)
+
+    def get_results(self):
+        """
+        Returns the results of the optimization problem.
+        """
+        pass
+
+    def save_results(self, path):
+        """
+        Saves the results of the optimization problem.
+
+        Parameters:
+        path (str): Path to save the results
+        """
+        torch.save(self.linear_model, str(path) + '.pth')
+
+    def print_results(self):
+        """
+        Prints the results of the optimization problem.
+        """
+        print("Linear model: ", self.linear_model)
+        print("MLP model: ", self.mlp_model)
+
+    def transform(self, z1) -> torch.Tensor:
+        """
+        Transforms the input data using the learned transformation.
+
+        Parameters:
+            z1 (np.ndarray or torch.Tensor): Input data matrix of shape (n_samples, latent_dim1)
+
+        Returns:
+            torch.Tensor: Transformed latent vectors of shape (n_samples, latent_dim2)
+        """
+        if isinstance(z1, np.ndarray):
+            z1 = torch.from_numpy(z1)
+        # obtain multiple predictions with dropout enabled
+        z2_linear = []
+        for i in range(50):
+            z2_linear.append(self.linear_model(z1).detach().cpu())
+        z2_linear = torch.stack(z2_linear)
+        var_linear = torch.var(z2_linear, dim=0).mean(dim=1)
+        z2_linear = torch.mean(z2_linear, dim=0)
+
+        self.mlp_model.eval()
+        z2_mlp = self.mlp_model(z1).detach().cpu()
+        # for each sample, if the variance of the linear model is greater than the 90th percentile, use the mlp model
+        # mask = (var_linear < torch.quantile(var_linear, 0.95)).unsqueeze(1).expand_as(z2_linear)
+        # z2 = torch.where(mask, z2_linear, z2_mlp)
+        z2 = z2_linear
+        return z2
+
+    @classmethod
+    def from_file(cls, path):
+        """
+        Loads the results of the optimization problem from a file.
+
+        Parameters:
+            path (str): Path to the file containing the results
+
+        Returns:
+            BaseOptimizer: Instance of the BaseOptimizer class with the loaded results
+        """
+        linear_model = torch.load(str(path) + '.pth')
+        mlp_model = torch.load(str(path).replace('Adaptive', 'NeuralNetwork') + '.pth')
+        instance = cls(np.empty((1, 1)), np.empty((1, 1)), 0, 0)
+        instance.linear_model = linear_model
+        instance.mlp_model = mlp_model
+        return instance
 
 
 
