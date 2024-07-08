@@ -20,7 +20,10 @@ The workspace is organized into several directories and files, each serving a sp
 
 - **Model Definitions and Training**: The `models/` directory contains scripts like `models/definitions/vit.py` and `models/train.py` for defining and training neural network models.
 - **Configuration Management**: Various YAML files in the `config/` directory allow for flexible configuration of models and experiments.
-- **Data Processing and Visualization**: The `stitching/` directory, with scripts like `stitching/create_calculation_databases.py`, handles data processing and preparation for visualization.
+- **Mapping Creation**: The `optimization/optimization_run_all.ipynb` creates all the mappings (for now, linear, affine and NN) between the models saved in one folder.
+- **Data Processing**: The script `stitching/create_calculation_databases.py` handles data processing and preparation for visualization, creating three databases from which one can get different information regarding the performance of the different mapping under different settings.
+- **Visualization**: The notebook `stitching/visualize_perfomances.ipynb` takes as input these databases, and generates various plots for future visualization
+
 
 ## Installation
 

@@ -11,6 +11,7 @@ from lightning.pytorch import loggers as pl_loggers
 from optimization.base_optimizer import BaseOptimizer
 from optimization.bayesian_linear import BayesianLinearRegression
 from optimization.mlp import MLP
+from optimization.affinemodel import AffineModel
 
 
 class AffineFitting(BaseOptimizer):
@@ -64,6 +65,8 @@ class AffineFitting(BaseOptimizer):
         print("Optimal value: ", opt_value)
         print(A_aff_opt)
         print(b_aff_opt)
+        print("A_aff size: ", A_aff_opt.shape)
+        print("b_aff size: ", b_aff_opt.shape)
 
     def save_results(self, path):
         # As numpy arrays
@@ -98,6 +101,8 @@ class AffineFitting(BaseOptimizer):
         instance = cls(np.zeros((1, latent_dim1)), np.zeros((1, latent_dim2)), 0)
         instance.A_aff = cp.Parameter((latent_dim2, latent_dim1), value=A)
         instance.b_aff = cp.Parameter(latent_dim2, value=b)
+
+        instance.problem = cp.Problem(cp.Minimize(instance.define_loss()))
         return instance
 
 
@@ -474,4 +479,112 @@ class AdaptiveFitting(BaseOptimizer):
         instance = cls(np.empty((1, 1)), np.empty((1, 1)), 0, 0)
         instance.linear_model = linear_model
         instance.mlp_model = mlp_model
+        return instance
+
+
+
+class DecoupleFitting(BaseOptimizer):
+    def __init__(self, z1, z2, lamda, learning_rate=0.01, epochs=200, do_print=True):
+        """
+        Initializes the DecoupleFitting class.
+
+        Parameters:
+            z1 (np.ndarray): Input data matrix of shape (n_samples, latent_dim1)
+           f z2 (np.ndarray): Output data matrix of shape (n_samples, latent_dim2)
+            lamda (float): Regularization parameter
+            learning_rate (float): Learning rate for the optimizer
+            epochs (int): Number of epochs to train the model
+            do_print (bool): Flag to print training progress
+        """
+        self.z1 = torch.tensor(z1, dtype=torch.float32)
+        self.z2 = torch.tensor(z2, dtype=torch.float32)
+        self.latentdim1 = self.z1.shape[1],
+        self.latentdim2 = self.z2.shape[1]
+        self.epochs = epochs
+        self.lamda = lamda
+        self.learning_rate = learning_rate
+        self.do_print = do_print
+
+        self.mapping = AffineModel(self.z1.shape[1], self.z2.shape[1], lamda, learning_rate)
+
+
+    def fit(self):
+        """
+        Trains the affine model.
+        """
+
+        trainer = Trainer(max_epochs=self.epochs, enable_progress_bar=False, logger = False)
+        trainer.fit(self.mapping, DataLoader(TensorDataset(self.z1, self.z2), batch_size=self.z1.size(0), shuffle=True))
+
+
+    def get_results(self):
+        """
+        Returns the results of the optimization problem.
+
+        Returns:
+            AffineModel: Trained model
+        """
+        return self.mapping.A1.detach().numpy(), self.mapping.A2.detach().numpy()
+
+    def save_results(self, path):
+        """
+        Saves the model parameters to a file.
+
+        Parameters:
+            path (str): Path to save the model parameters
+        """
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        torch.save(self.mapping.state_dict(), str(path) + '.pth')
+        print("Model saved at ", path)
+
+    def print_results(self):
+        """
+        Prints the results of the optimization problem.
+        """
+        print("A1:")
+        print(self.mapping.A1.detach().numpy())
+        print("A2:")
+        print(self.mapping.A2.detach().numpy())
+
+    def transform(self, z1):
+        """
+        Applies the trained model to new data.
+
+        Parameters:
+            z1 (np.ndarray or torch.Tensor): New input data matrix of shape (n_samples, latent_dim1)
+
+        Returns:
+            torch.Tensor: Transformed data matrix of shape (n_samples, latent_dim2)
+        """
+        #self.mapping.eval()
+        if isinstance(z1, np.ndarray):
+            z1 = torch.tensor(z1, dtype=torch.float32)
+        with torch.no_grad():
+            z1_transformed = z1 @ self.mapping.A1.detach().T
+        return z1_transformed
+
+    @classmethod
+    def from_file(cls, path):
+        """
+        Loads the results of the optimization problem from a file.
+
+        Parameters:
+            path (str): Path to the file containing the results
+
+        Returns:
+            DecoupleFitting: Instance of the DecoupleFitting class with the loaded results
+        """
+        instance = cls(np.empty((1, 1)), np.empty((1, 1)), 0, 0)
+        # Create an instance with the correct dimensions and load the state_dict
+        model_state_dict = torch.load(str(path) + '.pth')
+
+        # Create a new instance of AffineModel with the correct dimensions
+        latent_dim1 = model_state_dict['A1'].size(1)  # get latent_dim1 from A1
+        latent_dim2 = model_state_dict['A1'].size(0)  # get latent_dim2 from A1
+        lamda = model_state_dict.get('lamda', 0)  # get lambda from model_state_dict or default to 0
+        learning_rate = model_state_dict.get('learning_rate', 0.01)  # get learning_rate from model_state_dict or default to 0.01
+
+        instance.mapping = AffineModel(latent_dim1, latent_dim2, lamda, learning_rate)
+        instance.mapping.load_state_dict(model_state_dict)
+
         return instance

@@ -280,8 +280,8 @@ def sample_with_half_worst_classes_images(n_samples, images, labels, model, loss
         losses_by_class[label].append(loss)
 
     worst_classes = sorted(losses_by_class, key=lambda x: np.mean(losses_by_class[x]))[
-                    : len(losses_by_class) // 2
-                    ]
+        : len(losses_by_class) // 2
+    ]
 
     label_to_images = {k: v for k, v in label_to_images.items() if k in worst_classes}
     label_to_indices = {k: v for k, v in label_to_indices.items() if k in worst_classes}
