@@ -132,7 +132,7 @@ def criterion(prediction, images):
         return errors
 
 
-def create_datasets(filters, directory_to_explore, current_dir, output_name):
+def create_datasets(filters, directory_to_explore, output_name):
     """
     Create datasets based on the given filters and directory to explore.
 
@@ -200,9 +200,7 @@ def create_datasets(filters, directory_to_explore, current_dir, output_name):
                 model_path=file1,
             ).to(DEVICE).eval()
             latent_left = model1.get_latent_space(images).float()
-            latent_left_np = latent_left.detach().cpu().numpy()
             decoded_left = model1.decode(latent_left).to(DEVICE).float()
-            decoded_left_np = decoded_left.detach().cpu().numpy()
             #calculate all the errors
             errors_by_image_model_1 = criterion(decoded_left, images).detach().cpu().numpy()
             #couple each error with its index
@@ -231,9 +229,7 @@ def create_datasets(filters, directory_to_explore, current_dir, output_name):
                 model_path=file2,
             ).to(DEVICE).eval()
             latent_right = model2.get_latent_space(images).to(DEVICE).float()
-            latent_right_np = latent_right.detach().cpu().numpy()
             decoded_right = model2.decode(latent_right).to(DEVICE).float()
-            decoded_right_np = decoded_right.detach().cpu().numpy()
             errors_by_image_model_2 = criterion(decoded_right, images).detach().cpu().numpy()
             #couple each error with its index
             sorted_indices_model2 = np.argsort(errors_by_image_model_2)
@@ -265,7 +261,6 @@ def create_datasets(filters, directory_to_explore, current_dir, output_name):
         # Decode latents
         decoded_transformed = model2.decode(transformed_latent_space).to(DEVICE).float()
         # Calculate reconstruction errors
-        decoded_transformed_np = decoded_transformed.detach().cpu().numpy()
         errors_by_image_stiched = criterion(decoded_transformed, images).detach().cpu().numpy()
 
 
@@ -313,7 +308,7 @@ def main(cfg: DictConfig) -> None:
     """
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
     results_class_df = (
-        create_datasets(cfg.filters, cfg.directory_to_explore, cfg.path_to_test_file, cfg.output_name)
+        create_datasets(cfg.filters, cfg.directory_to_explore, cfg.output_name)
     )
     
     results_class_df = pd.DataFrame(results_class_df)
