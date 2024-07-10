@@ -150,7 +150,6 @@ def sample_furthest_away_images(n_samples, images, labels, model, batch_size=128
 def sample_removing_outliers(n_samples, images, labels, model, batch_size=128, device='cpu',seed = 0):
     model.eval()
     errors = []
-    print("Calculating errors")
     for image in images:
 
         image = image.to(device)
@@ -160,21 +159,17 @@ def sample_removing_outliers(n_samples, images, labels, model, batch_size=128, d
 
         error = F.mse_loss(x, image.unsqueeze(0)).item()
         errors.append(error)
-    print("Errors calculated")
     mean_error = np.mean(errors)
     variance_error = np.var(errors)
     images = images.detach().cpu().numpy()
     labels = labels.detach().cpu().numpy()
-    print("Filtering outliers")
     ## exclude outliers
     filtered_data = [(image, label) for n, (image, label) in enumerate(zip(images, labels)) if errors[n] < variance_error/2 + mean_error]
     filtered_outliers = [image for image, label in filtered_data]
     filtered_outliers_labels = [label for image, label in filtered_data]
-    print("Outliers filtered")
     if len(filtered_outliers) < n_samples:
         logging.info(f"Number of images without outliers is less than n_samples.")
         n_samples = len(filtered_outliers)
-    print("Sampling equally per class")
     filtered_outliers, filtered_outliers_labels =  torch.tensor(filtered_outliers), torch.tensor(filtered_outliers_labels)
     images_sampled, labels_sampled = sample_equally_per_class_images(n_samples, filtered_outliers, filtered_outliers_labels, seed=seed)
     return images_sampled, labels_sampled
