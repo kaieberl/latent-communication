@@ -14,6 +14,9 @@ def load_mapping(path, mapping):
     elif mapping.lower() == 'adaptive':
         from optimization.optimizer import AdaptiveFitting
         mapping = AdaptiveFitting.from_file(path)
+    elif mapping.lower() == 'decoupleaffine':
+        from optimization.optimizer import DecoupleFitting
+        mapping = DecoupleFitting.from_file(path,"Affine")
     else:
         raise ValueError(f"Invalid experiment name: {mapping}")
     return mapping

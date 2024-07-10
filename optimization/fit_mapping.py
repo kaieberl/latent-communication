@@ -116,6 +116,9 @@ def create_mapping(cfg, latents1, latents2, val_latents1=None, val_latents2=None
     elif cfg.mapping == 'Decouple':
         from optimization.optimizer import DecoupleFitting
         mapping = DecoupleFitting(latents1, latents2, lamda=cfg.lamda, do_print=do_print)
+    elif cfg.mapping == 'DecoupleAffine':
+        from optimization.optimizer import DecoupleFitting
+        mapping = DecoupleFitting(latents1, latents2, lamda=cfg.lamda, do_print=do_print,mapping_type='Affine')
     else:
         raise ValueError("Invalid experiment name")
     return mapping
