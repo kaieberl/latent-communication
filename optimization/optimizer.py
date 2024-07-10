@@ -14,6 +14,72 @@ from optimization.mlp import MLP
 from optimization.affinemodel import AffineModel
 
 
+
+
+class ScalingFitting(BaseOptimizer):
+    def __init__(self, z1, z2, lamda, do_print=True):
+        super().__init__(z1, z2)
+        self.lamda = lamda
+        self.latent_dim1 = z1.shape[1] if len(z1.shape) > 1 else 1
+        self.latent_dim2 = z2.shape[1] if len(z2.shape) > 1 else 1
+        self.A_aff = cp.Variable((self.latent_dim2, self.latent_dim1))
+        self.b_aff = cp.Variable(self.latent_dim2)
+        self.problem = None
+        self.do_print = do_print
+
+    def define_loss(self):
+        n_samples = self.z1.shape[0]
+        dropout_rate = 0.05
+        dropout_mask = np.random.binomial(1, 1 - dropout_rate, size=self.z1.shape)
+        z1_dropout = self.z1 * dropout_mask
+        
+        residuals = [self.A_aff @ z1_dropout[i] + self.b_aff - self.z2[i] for i in range(n_samples)]
+        loss_scaling = cp.norm2(cp.vstack(residuals)) ** 2 + self.lamda * cp.norm(self.A_aff, 'fro') ** 2
+        return loss_scaling
+
+    def define_constraints(self):
+        constraints = [self.A_aff @ self.A_aff.T == np.eye(self.latent_dim2)]
+        return constraints
+
+    def get_results(self):
+        if self.problem is None:
+            raise Exception("The problem has not been solved yet.")
+        return self.problem.value, self.A_aff.value, self.b_aff.value
+
+    def save_results(self, path):
+        S = self.A_aff.value
+        b_aff = self.b_aff.value
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        np.savez(path, S=S, b_aff=b_aff)
+        if self.do_print:
+            print("Results saved at ", path)
+        return path
+
+    def transform(self, z1):
+        if isinstance(z1, torch.Tensor):
+            z1 = z1.detach().cpu().numpy()
+        return np.dot(z1, self.A_aff.value.T) + self.b_aff.value
+
+    def optimize(self):
+        objective = cp.Minimize(self.define_loss())
+        constraints = self.define_constraints()
+        self.problem = cp.Problem(objective, constraints)
+        self.problem.solve()
+
+    @classmethod
+    def from_file(cls, path):
+        data = np.load(str(path) + '.npz')
+        S = data['S']
+        b_aff = data['b_aff']
+        latent_dim1, latent_dim2 = S.shape
+        instance = cls(np.zeros((1, latent_dim1)), np.zeros((1, latent_dim2)), 0)
+        instance.A_aff = cp.Parameter((latent_dim1, latent_dim2), value=S)
+        instance.b_aff = cp.Parameter(latent_dim2, value=b_aff)
+        instance.problem = cp.Problem(cp.Minimize(instance.define_loss()), instance.define_constraints())
+        return instance
+
+
+
 class AffineFitting(BaseOptimizer):
     def __init__(self, z1, z2, lamda, do_print=True):
         """
