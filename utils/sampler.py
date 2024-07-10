@@ -131,7 +131,6 @@ def sample_uncertainty(dataloader, model, mapping):
 
 def sample_convex_hulls_images(n_samples, images, labels, model, seed=0, device="cpu", pca_components=3):
     model.eval()
-
     image_label_dict = {}
     for image, label in zip(images, labels):
         label = label.item()
@@ -244,17 +243,12 @@ def sample_removing_outliers(n_samples, images, labels, model, batch_size=128, d
 
 
 def sample_equally_per_class_images(n_samples, images, labels, seed=0):
-    label_to_images = {label.item(): [] for label in torch.unique(labels)}
-    label_to_indices = {label.item(): [] for label in torch.unique(labels)}
-
-    for idx, (image, label) in enumerate(zip(images, labels)):
-        label_to_images[label.item()].append(image)
-        label_to_indices[label.item()].append(idx)
-
-    n_per_class = math.ceil(n_samples / len(label_to_images))
+    labels = labels.detach().cpu().numpy()
+    labels_ = np.unique(labels)
+    class_indices = {i: np.where(labels == i)[0] for i in labels_}
+    n_per_class = math.ceil(n_samples / len(labels_))
     images_sampled = []
     labels_sampled = []
-    indices_sampled = []
     np.random.seed(seed)
     for label, image_list in label_to_images.items():
         indices = np.random.choice(len(image_list), n_per_class, replace=False)
@@ -266,37 +260,43 @@ def sample_equally_per_class_images(n_samples, images, labels, seed=0):
 
 
 def sample_with_half_worst_classes_images(n_samples, images, labels, model, loss_fun=F.mse_loss, device="cpu", seed=0):
-    label_to_images = {label.item(): [] for label in torch.unique(labels)}
-    label_to_indices = {label.item(): [] for label in torch.unique(labels)}
-    losses_by_class = {label.item(): [] for label in torch.unique(labels)}
     model.eval()
-    for idx, (image, label) in enumerate(zip(images, labels)):
-        label = label.item()
-        image = image.to(device)
-        x = model(image.unsqueeze(0))
-        loss = loss_fun(x, image.unsqueeze(0)).item()
-        label_to_images[label].append(image)
-        label_to_indices[label].append(idx)
-        losses_by_class[label].append(loss)
-
-    worst_classes = sorted(losses_by_class, key=lambda x: np.mean(losses_by_class[x]))[
-        : len(losses_by_class) // 2
-    ]
-
-    label_to_images = {k: v for k, v in label_to_images.items() if k in worst_classes}
-    label_to_indices = {k: v for k, v in label_to_indices.items() if k in worst_classes}
-    n_per_class = n_samples // len(label_to_images)
+    images = images.to(device)
+    labels = labels.to(device)
+    
+    # Forward pass for the entire batch
+    outputs = model(images)
+    
+    # Calculate losses for the entire batch
+    losses = [loss_fun(outputs[i], images[i]).item() for i in range(len(images))]
+    
+    # Get unique labels and their indices
+    unique_labels = torch.unique(labels).cpu().numpy()
+    label_indices = {label: np.where(labels.cpu().numpy() == label)[0] for label in unique_labels}
+    
+    # Calculate average losses per class
+    losses_by_class = {label: np.mean([losses[i] for i in indices]) for label, indices in label_indices.items()}
+    
+    # Select the worst performing classes (half of them)
+    worst_classes = sorted(losses_by_class, key=losses_by_class.get)[:len(losses_by_class) // 2]
+    
+    # Sample images and labels from the worst performing classes
+    np.random.seed(seed)
     images_sampled = []
     labels_sampled = []
-    indices_sampled = []
-    np.random.seed(seed)
-    for label, image_list in label_to_images.items():
-        indices = np.random.choice(len(image_list), n_per_class, replace=False)
-        images_sampled.extend([image_list[i] for i in indices])
+    for label in worst_classes:
+        indices = label_indices[label]
+        n_per_class = min(n_samples // len(worst_classes), len(indices))
+        sampled_indices = np.random.choice(indices, n_per_class, replace=False)
+        images_sampled.extend(images[sampled_indices])
         labels_sampled.extend([label] * n_per_class)
-        indices_sampled.extend([label_to_indices[label][i] for i in indices])
+    
+    # Convert lists to tensors
+    images_sampled = torch.stack(images_sampled)
+    labels_sampled = torch.tensor(labels_sampled)
+    
+    return images_sampled, labels_sampled
 
-    return torch.stack(images_sampled), torch.tensor(labels_sampled)
 
 
 def sample_equally_per_class(
@@ -323,7 +323,6 @@ def sample_equally_per_class(
         indices = np.random.choice(len(images), n_per_class, replace=False)
         images_sampled.extend([images[i] for i in indices])
         labels_sampled.extend([label] * n_per_class)
-    print(images_sampled)
     return torch.stack(images_sampled), torch.tensor(labels_sampled)
 
 

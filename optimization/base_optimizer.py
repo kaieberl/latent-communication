@@ -39,7 +39,7 @@ class BaseOptimizer:
         objective = cp.Minimize(loss)
         self.problem = cp.Problem(objective)
 
-    def fit(self):
+    def fit(self, max_iter=10000):
         """
         Solves the optimization problem.
         """
@@ -47,7 +47,7 @@ class BaseOptimizer:
             self.define_problem()
         if self.do_print:
             print("Solving the problem")
-        self.problem.solve()
+        self.problem.solve(solver=cp.SCS, max_iters=max_iter, warm_start=True)
 
     @abstractmethod
     def get_results(self):
