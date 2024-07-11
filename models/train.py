@@ -2,7 +2,6 @@
     python train.py --config-name config_train -m seed=1,2,3 name=pcktae,vae latent_size=10,30,50 hydra.output_subdir=null
 """
 
-import os.path
 import sys
 import os
 from pathlib import Path

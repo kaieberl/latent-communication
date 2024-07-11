@@ -1,0 +1,139 @@
+dataset: fmnist
+model1:
+  name: pcktae
+  path: .
+  latent_size: -1
+model2:
+  name: pcktae
+  path: .
+  latent_size: -1
+base_dir: .
+mapping_dir: ${base_dir}/results/transformations/mapping_files
+combinations:
+  - num_samples:
+      - 50
+      - 100
+      - 200
+    mapping:
+      - Linear
+      - Affine
+    lambda:
+      - 0
+    dropout:
+      - False
+    noisy:
+      - False
+    hidden_size:
+      - 0
+    sampling:
+      - convex_hull
+    latent_dim:
+      - 10
+      - 30
+  - num_samples:
+      - 50
+      - 100
+      - 200
+    mapping:
+      - NeuralNetwork
+    lambda:
+      - 0
+    dropout:
+      - False
+    noisy:
+      - False
+    hidden_size:
+      - 16
+    sampling:
+      - equally
+      - convex_hull
+    latent_dim:
+      - 10
+      - 30
+  - num_samples:
+      - 50
+      - 100
+      - 200
+    mapping:
+      - NeuralNetwork
+      - Hybrid
+    lambda:
+      - 0
+    dropout:
+      - True
+    noisy:
+      - False
+    hidden_size:
+      - 16
+      - 128
+    sampling:
+      - convex_hull
+    latent_dim:
+      - 10
+      - 30
+  - num_samples:
+      - 50
+      - 100
+      - 200
+    mapping:
+      - NeuralNetwork
+      - Hybrid
+    lambda:
+      - 0
+    dropout:
+      - False
+    noisy:
+      - True
+    hidden_size:
+      - 16
+      - 128
+    sampling:
+      - convex_hull
+    latent_dim:
+      - 10
+      - 30
+filters:
+  - name: MLP (baseline)
+    mapping: NeuralNetwork
+    lambda: 0
+    dropout: False
+    noisy: False
+    hidden_size: 16
+    sampling: equally
+  - name: |
+      + convex hull
+      sampling
+    mapping: NeuralNetwork
+    lambda: 0
+    dropout: False
+    noisy: False
+    hidden_size: 16
+    sampling: convex_hull
+  - name: |
+      + dropout,
+      hidden size 128
+    mapping: NeuralNetwork
+    lambda: 0
+    dropout: True
+    hidden_size: 128
+    sampling: convex_hull
+  - name: |
+      + noisy ReLU,
+      hidden size 128
+    mapping: NeuralNetwork
+    lambda: 0
+    noisy: True
+    hidden_size: 128
+    sampling: convex_hull
+  - name: Affine + MLP
+    mapping: Hybrid
+    lambda: 0
+    dropout: False
+    noisy: True
+    hidden_size: 128
+    sampling: convex_hull
+  - name: Affine
+    mapping: Affine
+    lambda: 0
+    hidden_size: 0
+    sampling: convex_hull

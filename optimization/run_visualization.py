@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 
 from optimization.fit_mapping import get_dataset
 from utils.visualization import visualize_mapping_error, visualize_latent_space
-from utils.model import load_models, get_transformations
+from utils.model import load_models
 from stitching.stitching import load_mapping
 
 device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
@@ -33,7 +33,6 @@ def get_latent_space_from_dataloader(model, dataloader, max_nr_batches=10):
             latents.append(latent)
             labels.append(label)
         else:
-            #skip for loop
             break
     print("Finished calculating latent_spaces")
     return torch.cat(latents), torch.cat(labels)

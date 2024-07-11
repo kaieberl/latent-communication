@@ -6,18 +6,35 @@ import torch.nn.functional as F
 from lightning import LightningModule
 
 
+class NoisyReLU(nn.Module):
+    def __init__(self, sigma=0.1):
+        super(NoisyReLU, self).__init__()
+        self.sigma = sigma
+
+    def forward(self, x):
+        noise = torch.randn_like(x) * self.sigma
+        return F.relu(x + noise)
+
+
 class MLP(LightningModule):
-    def __init__(self, source_dim, hidden_dim, target_dim, learning_rate, lamda) -> None:
+    def __init__(self, source_dim, hidden_dim, target_dim, learning_rate, lamda, dropout=0.3, noise_sigma=0.1) -> None:
         super().__init__()
+        self.hidden_dim = hidden_dim
         self.learning_rate = learning_rate
         self.lamda = lamda
+        self.dropout = dropout
+        self.noise_sigma = noise_sigma
+        if noise_sigma > 0:
+            activation = NoisyReLU(noise_sigma)
+        else:
+            activation = nn.GELU()
         self.model = nn.Sequential(
             nn.Linear(source_dim, hidden_dim),
-            nn.GELU(),
-            nn.Dropout(0.3),
+            activation,
+            nn.Dropout(dropout),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.GELU(),
-            nn.Dropout(0.4),
+            activation,
+            nn.Dropout(dropout + 0.1 if dropout > 0 else 0),
             nn.Linear(hidden_dim, target_dim)
         )
 

@@ -1,6 +1,0 @@
-outs:
-- md5: 0e419351732ad7887aaf1b15dfcb13f7.dir
-  size: 122549526
-  nfiles: 6
-  hash: md5
-  path: ResNetVAE

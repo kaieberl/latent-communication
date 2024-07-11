@@ -14,6 +14,12 @@ def load_mapping(path, mapping):
     elif mapping.lower() == 'adaptive':
         from optimization.optimizer import AdaptiveFitting
         mapping = AdaptiveFitting.from_file(path)
+    elif mapping.lower() == 'hybrid':
+        from optimization.optimizer import HybridFitting, AffineFitting
+        affine_path = str(path).replace('Hybrid', 'Affine').split('_')
+        affine_path = '_'.join([*affine_path[:10], *affine_path[12:]])
+        affine_mapping = AffineFitting.from_file(affine_path)
+        mapping = HybridFitting.from_file(path, affine_mapping)
     else:
         raise ValueError(f"Invalid experiment name: {mapping}")
     return mapping

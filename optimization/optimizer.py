@@ -1,4 +1,6 @@
+import pickle
 from pathlib import Path
+from typing import Union
 
 import numpy as np
 import cvxpy as cp
@@ -7,6 +9,7 @@ from lightning import Trainer
 from lightning.pytorch.callbacks import EarlyStopping
 from torch.utils.data import DataLoader, TensorDataset
 from lightning.pytorch import loggers as pl_loggers
+from sklearn.preprocessing import StandardScaler
 
 from optimization.base_optimizer import BaseOptimizer
 from optimization.bayesian_linear import BayesianLinearRegression
@@ -183,7 +186,7 @@ class LinearFitting(BaseOptimizer):
 
 
 class NeuralNetworkFitting(BaseOptimizer):
-    def __init__(self, z1, z2, hidden_dim, lamda, z1_val=None, z2_val=None, learning_rate=0.01, epochs=100,
+    def __init__(self, z1, z2, hidden_dim, lamda, z1_val=None, z2_val=None, learning_rate=0.01, epochs=100, dropout=0.3, noise_sigma=0.1,
                  do_print=True):
         """
         Defines a neural network mapping between two latent spaces. Uses the MLP model.
@@ -198,7 +201,7 @@ class NeuralNetworkFitting(BaseOptimizer):
         """
         super().__init__(z1, z2)
         self.epochs = epochs
-        self.model = MLP(self.latent_dim1, hidden_dim, self.latent_dim2, learning_rate, lamda)
+        self.model = MLP(self.latent_dim1, hidden_dim, self.latent_dim2, learning_rate, lamda, dropout, noise_sigma)
 
         self.z1 = torch.tensor(z1, dtype=torch.float32)
         self.z2 = torch.tensor(z2, dtype=torch.float32)
@@ -219,7 +222,7 @@ class NeuralNetworkFitting(BaseOptimizer):
         Trains the neural network model using early stopping.
         """
         tb_logger = pl_loggers.TensorBoardLogger(save_dir="logs/")
-        trainer = Trainer(max_epochs=self.epochs, min_epochs=self.epochs // 2, logger=tb_logger, log_every_n_steps=1,
+        trainer = Trainer(max_epochs=self.epochs, min_epochs=5, logger=tb_logger, log_every_n_steps=1,
                           callbacks=[EarlyStopping(monitor="val_loss", mode="min", patience=10)])
         train_loader = DataLoader(TensorDataset(self.z1, self.z2), batch_size=self.z1.size(0), shuffle=True)
         val_loader = None
@@ -227,6 +230,7 @@ class NeuralNetworkFitting(BaseOptimizer):
             val_loader = DataLoader(TensorDataset(self.z1_val, self.z2_val), batch_size=self.z1_val.size(0),
                                     shuffle=False)
         trainer.fit(self.model, train_loader, val_loader)
+        self.model = MLP.load_from_checkpoint(trainer.checkpoint_callback.best_model_path, source_dim=self.latent_dim1, hidden_dim=self.model.hidden_dim, target_dim=self.latent_dim2, learning_rate=self.model.learning_rate, lamda=self.model.lamda, dropout=self.model.dropout, noise_sigma=self.model.noise_sigma)
 
     def get_results(self):
         """
@@ -283,7 +287,9 @@ class NeuralNetworkFitting(BaseOptimizer):
             NeuralNetworkFitting: Instance of the NeuralNetworkFitting class with the loaded results
         """
         model = torch.load(str(path) + '.pth')
-        instance = cls(np.empty((1, 1)), np.empty((1, 1)), 0, 0)
+        dropout = 0.3 if str(path).split('_')[10] == "dropout" else 0
+        noise_sigma = 0.1 if str(path).split('_')[10] == "noisy" else False
+        instance = cls(np.empty((1, 1)), np.empty((1, 1)), 0, 0, dropout, noise_sigma)
         instance.model = model
         return instance
 
@@ -376,17 +382,17 @@ class KernelFitting(BaseOptimizer):
 
 
 class AdaptiveFitting(BaseOptimizer):
-    def __init__(self, z1, z2, hidden_dim, lamda, z1_val=None, z2_val=None, learning_rate=0.001):
+    def __init__(self, z1, z2, hidden_dim, lamda, z1_val=None, z2_val=None, learning_rate=0.001, dropout=0.3):
         """
         AdaptiveFitting trains a bayesian linear model and based on the uncertainty, chooses either a linear or MLP mapping.
 
         Parameters:
-            z1 (np.ndarray): Input data matrix of shape (n_samples, 32)
-            z2 (np.ndarray): Output data matrix of shape (n_samples, 32)
+            z1 (np.ndarray): Input data matrix of shape (n_samples, latent_size)
+            z2 (np.ndarray): Output data matrix of shape (n_samples, latent_size)
         """
         super().__init__(z1, z2)
         self.linear_model = BayesianLinearRegression(self.latent_dim1, self.latent_dim2, 0.004, lamda)
-        self.mlp_model = MLP(self.latent_dim1, hidden_dim, self.latent_dim2, learning_rate, lamda)
+        self.mlp_model = MLP(self.latent_dim1, hidden_dim, self.latent_dim2, learning_rate, lamda, dropout)
 
         self.z1 = torch.from_numpy(z1) if isinstance(z1, np.ndarray) else z1
         self.z2 = torch.from_numpy(z2) if isinstance(z2, np.ndarray) else z2
@@ -482,6 +488,103 @@ class AdaptiveFitting(BaseOptimizer):
         return instance
 
 
+class HybridFitting(BaseOptimizer):
+    def __init__(self, affine_model, z1, z2, hidden_dim, lamda, z1_val=None, z2_val=None, learning_rate=0.001, dropout=0.3, noise_sigma=0.1):
+        """Uses cvxpy linear mapping along with MLP mapping to predict the residuals.
+
+        Parameters:
+            affine_model (AffineFitting): Pretrained instance of the LinearFitting class
+            z1 (np.ndarray): Input data matrix of shape (n_samples, latent_size)
+            z2 (np.ndarray): Output data matrix of shape (n_samples, latent_size)
+            hidden_dim (int): Number of neurons in the hidden layer
+            lamda (float): Regularization parameter
+            learning_rate (float): Learning rate for the optimizer
+        """
+        super().__init__(z1, z2)
+        self.normalizer = StandardScaler()
+        self.affine_model = affine_model
+        self.mlp_model = MLP(self.latent_dim1, hidden_dim, self.latent_dim2, learning_rate, lamda, dropout, noise_sigma=noise_sigma)
+
+        self.z1 = torch.from_numpy(z1) if isinstance(z1, np.ndarray) else z1
+        self.z2 = torch.from_numpy(z2) if isinstance(z2, np.ndarray) else z2
+
+        if z1_val is not None:
+            self.z1_val = torch.from_numpy(z1_val) if isinstance(z1_val, np.ndarray) else z1_val
+            self.z2_val = torch.from_numpy(z2_val) if isinstance(z2_val, np.ndarray) else z2_val
+
+    def fit(self):
+        """
+        Solves the optimization problem.
+        """
+        residuals = self.z2.to(self.mlp_model.device) - self.affine_model.transform(self.z1)
+        residuals = torch.from_numpy(self.normalizer.fit_transform(residuals)).to(torch.float32)
+        train_loader = DataLoader(TensorDataset(self.z1, residuals), batch_size=self.z1.size(0), shuffle=True)
+
+        val_loader = None
+        if self.z1_val is not None:
+            residuals_val = self.z2_val.to(self.mlp_model.device) - self.affine_model.transform(self.z1_val)
+            residuals_val = torch.from_numpy(self.normalizer.transform(residuals_val)).to(torch.float32)
+            val_loader = DataLoader(TensorDataset(self.z1_val, residuals_val), batch_size=self.z1_val.size(0),
+                                    shuffle=False)
+
+        trainer = Trainer(max_epochs=30, min_epochs=5, callbacks=[EarlyStopping(monitor="val_loss", mode="min", patience=10)])
+        trainer.fit(self.mlp_model, train_loader, val_loader)
+        self.mlp_model = MLP.load_from_checkpoint(trainer.checkpoint_callback.best_model_path, source_dim=self.latent_dim1, hidden_dim=self.mlp_model.hidden_dim, target_dim=self.latent_dim2, learning_rate=self.mlp_model.learning_rate, lamda=self.mlp_model.lamda, dropout=self.mlp_model.dropout, noise_sigma=self.mlp_model.noise_sigma)
+
+    def get_results(self):
+        pass
+
+    def save_results(self, path):
+        torch.save(self.mlp_model, str(path) + '.pth')
+        with open(str(path) + '_scaler.pkl', 'wb') as f:
+            pickle.dump(self.normalizer, f)
+
+    def print_results(self):
+        print("Linear model: ", self.affine_model)
+        print("MLP model: ", self.mlp_model)
+
+    def transform(self, z1: Union[np.ndarray, torch.Tensor]) -> torch.Tensor:
+        """
+        Transforms the input data using the learned transformation.
+
+        Parameters:
+            z1 (np.ndarray or torch.Tensor): Input data matrix of shape (n_samples, latent_dim1)
+
+        Returns:
+            torch.Tensor: Transformed latent vectors of shape (n_samples, latent_dim2)
+        """
+        if isinstance(z1, np.ndarray):
+            z1 = torch.from_numpy(z1)
+        z2_linear = self.affine_model.transform(z1)
+        z2_residual = self.mlp_model(z1).detach().cpu()
+        z2_residual = self.normalizer.inverse_transform(z2_residual)
+        z2 = z2_linear + torch.from_numpy(z2_residual)
+        return z2
+
+    @classmethod
+    def from_file(cls, path, affine_model=None):
+        """
+        Loads the results of the optimization problem from a file.
+
+        Parameters:
+            path (str): Path to the file containing the results
+            affine_model (AffineFitting): Pretrained instance of the LinearFitting class
+
+        Returns:
+            BaseOptimizer: Instance of the BaseOptimizer class with the loaded results
+        """
+        if affine_model is None:
+            raise ValueError("Linear model must be provided.")
+        mlp_model = torch.load(str(path) + '.pth')
+        with open(str(path) + '_scaler.pkl', 'rb') as f:
+            normalizer = pickle.load(f)
+        dropout = 0.3 if str(path).split('_')[10] == "dropout" else 0
+        noise_sigma = 0.1 if str(path).split('_')[10] == "noisy" else 0
+        instance = cls(affine_model, np.empty((1, 1)), np.empty((1, 1)), 0, 0, dropout=dropout, noise_sigma=noise_sigma)
+        instance.mlp_model = mlp_model
+        instance.normalizer = normalizer
+        return instance
+
 
 class DecoupleFitting(BaseOptimizer):
     def __init__(self, z1, z2, lamda, learning_rate=0.01, epochs=200, do_print=True):
@@ -507,15 +610,13 @@ class DecoupleFitting(BaseOptimizer):
 
         self.mapping = AffineModel(self.z1.shape[1], self.z2.shape[1], lamda, learning_rate)
 
-
     def fit(self):
         """
         Trains the affine model.
         """
 
-        trainer = Trainer(max_epochs=self.epochs, enable_progress_bar=False, logger = False)
+        trainer = Trainer(max_epochs=self.epochs, enable_progress_bar=False, logger=False)
         trainer.fit(self.mapping, DataLoader(TensorDataset(self.z1, self.z2), batch_size=self.z1.size(0), shuffle=True))
-
 
     def get_results(self):
         """
@@ -582,7 +683,8 @@ class DecoupleFitting(BaseOptimizer):
         latent_dim1 = model_state_dict['A1'].size(1)  # get latent_dim1 from A1
         latent_dim2 = model_state_dict['A1'].size(0)  # get latent_dim2 from A1
         lamda = model_state_dict.get('lamda', 0)  # get lambda from model_state_dict or default to 0
-        learning_rate = model_state_dict.get('learning_rate', 0.01)  # get learning_rate from model_state_dict or default to 0.01
+        learning_rate = model_state_dict.get('learning_rate',
+                                             0.01)  # get learning_rate from model_state_dict or default to 0.01
 
         instance.mapping = AffineModel(latent_dim1, latent_dim2, lamda, learning_rate)
         instance.mapping.load_state_dict(model_state_dict)

@@ -1,7 +1,7 @@
 import torch
 import torchvision.transforms as transforms
 
-device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
+device = torch.device('cuda') if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
 
 
 def load_model(model_name, model_path=None, in_channels=1, size=7, latent_size=8, name_dataset=None, seed=0, *args,
@@ -22,18 +22,16 @@ def load_model(model_name, model_path=None, in_channels=1, size=7, latent_size=8
     elif model_name == 'ae':
         from models.definitions.ae import LightningAutoencoder as AE
         model = AE()
-    elif model_name == 'pcktae'  or model_name == 'pcktaeclass01234':
+    elif 'pcktae' in model_name:
         from models.definitions.PCKTAE import PocketAutoencoder
-        if model_path is None:
-            model = PocketAutoencoder(latent_size)
-        else:
-            model = PocketAutoencoder(path=model_path.split("/")[-1])
+        model = PocketAutoencoder(hidden_dim=int(latent_size), n_input_channels=in_channels)
     elif model_name == "verysmall-ae":
         from models.definitions.ae_latentdim10 import VerySmallAutoencoder
         model = VerySmallAutoencoder()
     else:
         raise ValueError(f"Unknown model name: {model_name}")
 
+    model.to(device)
     if model_path is not None:
         model.load_state_dict(torch.load(model_path, map_location=device))
     return model
