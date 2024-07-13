@@ -14,6 +14,8 @@ from optimization.mlp import MLP
 from optimization.model_decouple import AffineModel,LinearModel
 
 
+
+
 class AffineFitting(BaseOptimizer):
     def __init__(self, z1, z2, lamda, do_print=True):
         """
