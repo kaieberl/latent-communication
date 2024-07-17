@@ -1,5 +1,7 @@
-"""Invoke with:
-    python run_visualization.py --config-name config_map
+"""Creates a PCA scatter plot of the latent space and associated mapping error.
+
+First fit a mapping using `fit_mapping.py`, then invoke with:
+    python run_visualization.py
 """
 
 import numpy as np
@@ -41,7 +43,7 @@ def get_latent_space_from_dataloader(model, dataloader, max_nr_batches=10):
 @hydra.main(version_base="1.1", config_path="../config", config_name="config_map")
 def main(cfg: DictConfig):
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
-    dataset = get_dataset(cfg, model_name='model1', train=False)
+    dataset = get_dataset(cfg, model_name=cfg.model1.name, train=False)
     test_loader = DataLoader(dataset, batch_size=128, shuffle=False)
 
     # Load model
@@ -69,7 +71,7 @@ def main(cfg: DictConfig):
 
     # Plot the results
     print(f"Mean error for {cfg.mapping} mapping: {np.mean(np.linalg.norm(latents2 - latents1_trafo, axis=1)):.4f}")
-    cfg.storage_path = cfg.base_dir / "results/transformations/figures" / cfg.model1.name.upper()
+    cfg.storage_path = cfg.base_dir / "results/transformations/figures_" / cfg.model1.name.upper()
     if not cfg.storage_path.exists():
         cfg.storage_path.mkdir(parents=True)
     visualize_latent_space(latents1, labels,

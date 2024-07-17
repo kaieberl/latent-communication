@@ -1,20 +1,18 @@
 import hashlib
-import os
 
-import numpy as np
-import torch
 from utils.dataloaders.full_dataloaders import DataLoaderMNIST
 import math
 import torch.nn.functional as F
 import numpy as np
 import torch
-import random
 import logging
 
 from sklearn.decomposition import PCA
 import random
 from scipy.spatial.distance import cdist
 from scipy.spatial import ConvexHull
+
+device = torch.device("cuda") if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
 
 def simple_sampler(indices, model, transformations, device, seed=10):
@@ -72,79 +70,123 @@ def get_model_hash(model):
     return hashlib.md5(model_string.encode()).hexdigest()
 
 
-def sample_convex_hull(dataloader, model, train_samples, val_samples=5000):
+def sample_convex_hull(dataloader, model1, model2, train_samples, val_samples=1000):
     """Get train samples from convex hull, validation samples uniformly sampled.
-    Samples are stored for each model and only re-calculated for unknown models.
     """
-    model_hash = get_model_hash(model)
-    filename = f"latents_{model_hash}.pt"
-    if os.path.exists(filename):
-        data = torch.load(filename)
-        latents, labels = data['latents'], data['labels']
-    else:
-        model.eval()
-        latents = []
-        labels = []
-        for images, targets in dataloader:
-            images = images.to(model.device)
-            latents_batch = model.get_latent_space(images).detach()
-            latents.append(latents_batch)
-            labels.append(targets)
-        latents = torch.cat(latents, dim=0)
-        labels = torch.cat(labels, dim=0)
-        # torch.save({'latents': latents, 'labels': labels}, filename)
+    images, labels = next(iter(dataloader))
+    train_data, val_data = sample_convex_hulls_latents(train_samples, images, labels, model1, model2, val_samples=val_samples)
+    return train_data, val_data
 
-    n_samples_per_class = train_samples // 10
-    pca = PCA(n_components=3)
-    latents_reduced = pca.fit_transform(latents.detach().cpu().numpy())
-    convex_hull = ConvexHull(latents_reduced)
-    print(f"{len(convex_hull.vertices)} vertices in the convex hull.")
-    train_indices = []
-    for class_idx in range(10):
-        class_indices = np.where(labels.cpu().numpy() == class_idx)[0]
-        hull_indices = [idx for idx in convex_hull.vertices if idx in class_indices]
 
-        if len(hull_indices) >= n_samples_per_class:
-            selected_indices = np.random.choice(hull_indices, n_samples_per_class, replace=False)
-        else:
-            additional_indices = np.setdiff1d(class_indices, hull_indices)
-            additional_samples_needed = n_samples_per_class - len(hull_indices)
-            selected_additional_indices = np.random.choice(additional_indices, additional_samples_needed, replace=False)
-            selected_indices = np.concatenate([hull_indices, selected_additional_indices])
+def sample_uniformly(dataloader, model1, model2, n_samples, val_samples=1000):
+    """Get training samples uniformly sampled, validation samples uniformly sampled
+    """
+    model1.eval()
+    images, labels = next(iter(dataloader))
+    images = images.to(model1.device)
+    latents1 = model1.get_latent_space(images).detach()
+    latents2 = model2.get_latent_space(images).detach()
 
-        train_indices.extend(selected_indices)
-
-    train_indices = np.array(train_indices)
+    indices = np.random.choice(len(latents1), n_samples, replace=False)
+    train_indices = indices
     all_indices = np.arange(len(labels))
     remaining_indices = np.setdiff1d(all_indices, train_indices)
     val_indices = np.random.choice(remaining_indices, val_samples, replace=False)
 
-    return train_indices, latents[train_indices], labels[train_indices], val_indices, latents[val_indices], labels[val_indices]
+    return (latents1[train_indices], latents2[train_indices], labels[train_indices]), (latents1[val_indices], latents2[val_indices], labels[val_indices])
 
 
-def sample_uncertainty(dataloader, model, mapping):
-    """Get training samples that have highest uncertainty, validation samples uniformly sampled.
-    """
+def sample_convex_hulls_latents(n_samples, images, labels, model1, model2, seed=0, pca_components=3, val_samples=0):
+    model1.eval()
+
+    latents1 = model1.get_latent_space(images.to(device)).detach().cpu().numpy()
+    latents2 = model2.get_latent_space(images.to(device)).detach().cpu().numpy()
+    latent_label_dict = {label.item(): [] for label in labels.unique()}
+    for image, label, latent in zip(images, labels, latents1):
+        latent_label_dict[label.item()].append((image, latent))
+
+    n_per_class = math.ceil(n_samples / len(latent_label_dict))
+    latents1_sampled = []
+    latents2_sampled = []
+    labels_sampled = []
+    remaining_samples = 0
+    np.random.seed(seed)
+
+    training_indices = set()
+
+    for class_name, data in latent_label_dict.items():
+        images_class, latents_class = zip(*data)
+        latents_class = np.array(latents_class).squeeze()  # Squeeze to remove extra dimensions if any
+        pca = PCA(n_components=pca_components)
+        latents_class_reduced = pca.fit_transform(latents_class)
+
+        if len(latents_class_reduced) > 2:  # ConvexHull requires at least 3 points
+            convex_hull = ConvexHull(latents_class_reduced)
+            vertices = convex_hull.vertices
+
+            if len(vertices) >= n_per_class:
+                indices = np.random.choice(vertices, n_per_class, replace=False)
+                selected_latents = latents_class[indices]
+                training_indices.update([idx for idx in indices])
+            else:
+                logging.info(
+                    f"Class {class_name} has less vertices than {n_per_class} samples in the convex hull. Sampling randomly.")
+                selected_latents = latents_class[vertices]
+                training_indices.update([idx for idx in vertices])
+                remaining_samples += n_per_class - len(selected_latents)
+        else:
+            logging.info(f"Class {class_name} has less than 3 points, unable to form a convex hull. Sampling randomly.")
+            indices = np.random.choice(len(images_class), n_per_class, replace=False)
+            selected_latents = latents_class[indices]
+            training_indices.update([idx for idx in indices])
+            remaining_samples += n_per_class - len(selected_latents)
+
+        latents1_sampled.extend(selected_latents)
+        latents2_sampled.extend(latents2[indices])
+        labels_sampled.extend([class_name] * len(selected_latents))
+
+    if remaining_samples > 0:
+        logging.info(f"Remaining samples: {remaining_samples}")
+        remaining_images, remaining_labels = sample_equally_per_class_images(remaining_samples, images, labels, seed)
+        remaining_latents1 = model1.get_latent_space(remaining_images.to(device)).detach().cpu().numpy()
+        remaining_latents2 = model2.get_latent_space(remaining_images.to(device)).detach().cpu().numpy()
+        latents1_sampled.extend(remaining_latents1)
+        latents2_sampled.extend(remaining_latents2)
+        labels_sampled.extend(remaining_labels)
+
+    training_latents1 = torch.tensor(latents1_sampled)
+    training_latents2 = torch.tensor(latents2_sampled)
+    training_labels = torch.tensor(labels_sampled)
+
+    if val_samples == 0:
+        return training_latents1, training_labels
+
+    all_indices = set(range(len(images)))
+    remaining_indices = list(all_indices - training_indices)
+    np.random.seed(seed + 1)
+    validation_indices = np.random.choice(remaining_indices, val_samples, replace=False)
+    validation_latents1 = latents1[validation_indices]
+    validation_latents2 = latents2[validation_indices]
+    validation_labels = labels[validation_indices]
+
+    return (training_latents1, training_latents2, training_labels), (validation_latents1, validation_latents2, validation_labels)
+
+
+def sample_convex_hulls_images(n_samples, images, labels, model, seed=0, pca_components=3, val_samples=0):
     model.eval()
-    uncertainty = mapping.get_uncertainty()
 
-
-def sample_convex_hulls_images(n_samples, images, labels, model, seed=0, device="cpu", pca_components=3):
-    model.eval()
-
-    image_label_dict = {}
-    for image, label in zip(images, labels):
-        label = label.item()
-        if label not in image_label_dict:
-            image_label_dict[label] = []
-        latent = model.get_latent_space(image.unsqueeze(0).to(device)).detach().cpu().numpy()
-        image_label_dict[label].append((image, latent))
+    latents = model.get_latent_space(images.to(device)).detach().cpu().numpy()
+    image_label_dict = {label.item(): [] for label in labels.unique()}
+    for image, label, latent in zip(images, labels, latents):
+        image_label_dict[label.item()].append((image, latent))
 
     n_per_class = math.ceil(n_samples / len(image_label_dict))
     images_sampled = []
     labels_sampled = []
     remaining_samples = 0
     np.random.seed(seed)
+
+    training_indices = set()
 
     for class_name, data in image_label_dict.items():
         images_class, latents_class = zip(*data)
@@ -159,15 +201,18 @@ def sample_convex_hulls_images(n_samples, images, labels, model, seed=0, device=
             if len(vertices) >= n_per_class:
                 indices = np.random.choice(vertices, n_per_class, replace=False)
                 selected_images = [images_class[idx] for idx in indices]
+                training_indices.update([idx for idx in indices])
             else:
                 logging.info(
                     f"Class {class_name} has less vertices than {n_per_class} samples in the convex hull. Sampling randomly.")
                 selected_images = [images_class[idx] for idx in vertices]
+                training_indices.update([idx for idx in vertices])
                 remaining_samples += n_per_class - len(selected_images)
         else:
             logging.info(f"Class {class_name} has less than 3 points, unable to form a convex hull. Sampling randomly.")
             indices = np.random.choice(len(images_class), n_per_class, replace=False)
             selected_images = [images_class[idx] for idx in indices]
+            training_indices.update([idx for idx in indices])
             remaining_samples += n_per_class - len(selected_images)
 
         images_sampled.extend(selected_images)
@@ -179,7 +224,20 @@ def sample_convex_hulls_images(n_samples, images, labels, model, seed=0, device=
         images_sampled.extend(remaining_images)
         labels_sampled.extend(remaining_labels)
 
-    return torch.stack(images_sampled), torch.tensor(labels_sampled)
+    training_images = torch.stack(images_sampled)
+    training_labels = torch.tensor(labels_sampled)
+
+    if val_samples == 0:
+        return training_images, training_labels
+
+    all_indices = set(range(len(images)))
+    remaining_indices = list(all_indices - training_indices)
+    np.random.seed(seed + 1)
+    validation_indices = np.random.choice(remaining_indices, val_samples, replace=False)
+    validation_images = images[validation_indices]
+    validation_labels = labels[validation_indices]
+
+    return (training_images, training_labels), (validation_images, validation_labels)
 
 
 def sample_furthest_away_images(n_samples, images, labels, model, batch_size=128, device='cpu'):
@@ -243,7 +301,7 @@ def sample_removing_outliers(n_samples, images, labels, model, batch_size=128, d
     return images_sampled, labels_sampled
 
 
-def sample_equally_per_class_images(n_samples, images, labels, seed=0):
+def sample_equally_per_class_images(n_samples, images, labels, seed=0, val_samples=0):
     label_to_images = {label.item(): [] for label in torch.unique(labels)}
     label_to_indices = {label.item(): [] for label in torch.unique(labels)}
 
@@ -262,7 +320,17 @@ def sample_equally_per_class_images(n_samples, images, labels, seed=0):
         labels_sampled.extend([label] * n_per_class)
         indices_sampled.extend([label_to_indices[label][i] for i in indices])
 
-    return torch.stack(images_sampled), torch.tensor(labels_sampled)
+    if val_samples == 0:
+        return torch.stack(images_sampled), torch.tensor(labels_sampled)
+
+    all_indices = set(range(len(images)))
+    remaining_indices = list(all_indices - set(indices_sampled))
+    np.random.seed(seed + 1)
+    validation_indices = np.random.choice(remaining_indices, val_samples, replace=False)
+    validation_images = images[validation_indices]
+    validation_labels = labels[validation_indices]
+
+    return (torch.stack(images_sampled), torch.tensor(labels_sampled)), (validation_images, validation_labels)
 
 
 def sample_with_half_worst_classes_images(n_samples, images, labels, model, loss_fun=F.mse_loss, device="cpu", seed=0):

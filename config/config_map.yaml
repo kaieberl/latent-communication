@@ -1,21 +1,23 @@
-mapping: Affine
+mapping: Adaptive
 sampling: equally
 lamda: 0
-num_samples: 200
-hidden_size: 128
+num_samples: 50
+hidden_size: 16
+dropout: True
+noisy: False
 learning_rate: 0.004
 epochs: 100
 dataset: fmnist
 base_dir: .
 storage_path: .
 model1:
-  seed: 1
-  name: vae
-  latent_size: 8
+  seed: 2
+  name: pcktae
+  latent_size: 10
   path: .
 model2:
-  seed: 2
-  name: vae
-  latent_size: 8
+  seed: 1
+  name: pcktae
+  latent_size: 10
   path: .
 visualization: pca

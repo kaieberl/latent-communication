@@ -7,17 +7,15 @@ from lightning import LightningModule
 
 
 class BayesianLinearRegression(LightningModule):
-    def __init__(self, source_dim, target_dim, learning_rate, lamda) -> None:
+    def __init__(self, source_dim, target_dim, learning_rate, lamda=0) -> None:
         super().__init__()
         self.learning_rate = learning_rate
         self.lamda = lamda
-        self.A_aff = nn.Parameter(torch.randn(source_dim, target_dim))
-        self.b_aff = nn.Parameter(torch.randn(target_dim))
+        self.linear = nn.Linear(source_dim, target_dim, bias=False)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x.to(self.device)
-        # apply dropout to the weight elements of the model
-        x = x @ self.A_aff + self.b_aff
+        x = F.dropout(self.linear(x), p=0.1, training=self.training)
         return x
 
     def configure_optimizers(self):
@@ -25,11 +23,7 @@ class BayesianLinearRegression(LightningModule):
 
     def training_step(self, batch, batch_idx):
         source_data, target_data = batch
-        # residuals = [self.A_aff @ source_data[i] + self.b_aff - target_data[i] for i in range(self.z1.shape[0])]
-        # residuals = torch.stack(residuals)
-        residuals = self(source_data) - target_data
-        print(residuals.shape)
-        loss = torch.norm(residuals, p=2, dim=1).mean()
+        loss = F.mse_loss(self(source_data), target_data)
         self.log('train_loss', loss)
         return loss
 

@@ -115,9 +115,11 @@ class DataLoaderFashionMNIST:
         train_data = []
         train_labels = []
         for data, label in self.train_dataset:
-            train_data.append(data.numpy())
+            train_data.append(data)
             train_labels.append(label)
-        return torch.tensor(train_data), torch.tensor(train_labels)
+        train_data = torch.stack(train_data)
+        train_labels = torch.tensor(train_labels)
+        return train_data, train_labels
 
     def get_full_test_dataset(self):
         """

@@ -12,7 +12,7 @@ def load_model(model_name, model_path=None, in_channels=1, size=7, latent_size=8
     model_name = model_name.lower()
     if model_name == 'vae':
         from models.definitions.vae import VAE
-        model = VAE(in_dim=784, latent_dim=int(latent_size), return_var=False)
+        model = VAE(in_dim=784, latent_dim=int(latent_size), return_var=kwargs.get('return_var', False))
     elif model_name == 'resnet':
         from models.definitions.resnet import ResNet
         model = ResNet()
@@ -38,17 +38,13 @@ def load_model(model_name, model_path=None, in_channels=1, size=7, latent_size=8
 
 
 def load_models(cfg):
-    if cfg.dataset == 'mnist':
-        in_channels = 1
-        size = 7
-    elif cfg.dataset == 'fmnist':
-        in_channels = 1
-        size = 7
-    elif cfg.dataset == 'cifar10':
-        in_channels = 3
-        size = 8
-    else:
-        raise ValueError(f"Unknown dataset: {cfg.dataset}")
+    model_params_dict = {
+        'mnist': (1, 7),
+        'fmnist': (1, 7),
+        'cifar10': (3, 8),
+        'cifar100': (3, 8)
+    }
+    in_channels, size = model_params_dict[cfg.dataset]
     model1 = load_model(cfg.model1.name, cfg.model1.path, in_channels, size, cfg.model1.latent_size)
     model2 = load_model(cfg.model2.name, cfg.model2.path, in_channels, size, cfg.model2.latent_size)
     return model1, model2

@@ -50,7 +50,7 @@ class LightningBaseModel(LightningModule, ABC):
         latents = []
         labels = []
         self.eval()
-        for x, y in tqdm(dataloader):
+        for x, y in dataloader:
             x = x.to(self.device)
             labels.append(y)
             latents.append(self.get_latent_space(x).detach().cpu())

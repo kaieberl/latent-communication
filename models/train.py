@@ -1,14 +1,15 @@
-"""Invoke with:
-    python train.py --config-name config_train -m seed=1,2,3 name=pcktae,vae latent_size=10,30,50 hydra.output_subdir=null
+"""Script for training autoencoder models with different architectures and seeds.
+
+Specify the experiment parameters in `config/config_train.yaml`, then invoke with:
+    python train.py -m seed=1,2,3 name=pcktae,vae latent_size=10,30,50
+
+This defines a hydra multirun (sweep), which means the seed, name and latent_size parameters defined in the config file
+will be overridden with all possible combinations of the passed parameters.
+The base_dir parameter will be set at run time, please leave this as it is.
 """
 
-import sys
 import os
 from pathlib import Path
-
-current_dir = Path(__file__).resolve().parent
-parent_dir = current_dir.parent
-sys.path.append(str(parent_dir))
 
 import hydra
 import hydra.core.global_hydra
@@ -85,7 +86,7 @@ class FMNISTDataModule(L.LightningDataModule):
                                            batch_size=self.batch_size, shuffle=False)
 
 
-@hydra.main(config_path="../config")
+@hydra.main(version_base="1.1", config_path="../config", config_name="config_train")
 def main(cfg):
     base_dir = Path(hydra.utils.get_original_cwd()).parent
 
@@ -94,13 +95,13 @@ def main(cfg):
     transformations = Compose(get_transformations(cfg.name))
     if cfg.dataset == "cifar10":
         data_module = CIFAR10DataModule(transformations)
-        model = load_model(cfg.name, in_channels=3, latent_size=cfg.latent_size)
+        model = load_model(cfg.name, in_channels=3, latent_size=cfg.latent_size, return_var=True)
     elif cfg.dataset == "mnist":
         data_module = MNISTDataModule(transformations)
-        model = load_model(cfg.name, in_channels=1, latent_size=cfg.latent_size)
+        model = load_model(cfg.name, in_channels=1, latent_size=cfg.latent_size, return_var=True)
     elif cfg.dataset == "fmnist":
         data_module = FMNISTDataModule(transformations)
-        model = load_model(cfg.name, in_channels=1, latent_size=cfg.latent_size)
+        model = load_model(cfg.name, in_channels=1, latent_size=cfg.latent_size, return_var=True)
     else:
         raise ValueError(f"Unknown dataset: {cfg.dataset}")
     trainer = Trainer(max_epochs=cfg.epochs)

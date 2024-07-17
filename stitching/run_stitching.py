@@ -1,3 +1,15 @@
+"""Script for generating the box and line plots used in the presentation.
+
+Specify the experiment parameters in config/config_plot.yaml, then invoke with:
+    python run_stitching.py
+
+The config file contains a `combinations` and `filters` section.
+- With the default config file, all mapping parameter combinations for pcktae will be calculated and saved to results.csv, which takes quite long.
+This is only done the first time, in successive runs the values will be read from the csv.
+If you know in advance that you don't need some mapping combinations, you can exclude them from this section.
+- The filters section then specifies granularly which experiments to plot.
+"""
+
 import itertools
 import logging
 import os
@@ -49,10 +61,16 @@ def define_dataloader(file, file2, test=False):
     return load_full_dataset(dataloader, test) + (len(np.unique(dataloader.get_full_train_dataset()[1].numpy())),)
 
 
-def plot_loss(cfg, results):
-    """For each element in filters_dict, create a box plot and line plot with the loss."""
+def plot_loss(filters, results, file_path=None):
+    """For each element in filters_dict, create a box plot and line plot with the loss.
+
+    Args:
+        filters (dict): dictionary with filters.
+        results (list): list of dictionaries with results.
+        file_path (str): path to save the plots, e.g. path/to/FMNIST_VAE. Then _mse_comparison.png and _mse_overview.png will be appended.
+    """
     filter_results = []
-    for filter_dict in cfg.filters:
+    for filter_dict in filters:
         name = filter_dict['name']
         filter_dict = {key: value for key, value in filter_dict.items() if key != 'name'}
         for result in results:
@@ -61,36 +79,38 @@ def plot_loss(cfg, results):
                 filter_results.append(result)
 
     means = {}
-    for name in [filter['name'] for filter in cfg.filters]:
+    for name in [filter['name'] for filter in filters]:
         means[name] = np.mean([result['MSE_loss'] for result in filter_results if result['name'] == name])
     print(means)
 
     filter_results = pd.DataFrame(filter_results)
+
     # Plot MSE_loss vs. mapping (as a categorical variable)
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(8, 5))
     sns.boxplot(data=filter_results, x='name', y='MSE_loss')
     # plt.xticks(rotation=45)
     plt.xlabel('Mapping')
     plt.ylabel('Reconstruction Error')
     plt.ylim(bottom=0)
     plt.tight_layout()
-    plt.savefig(Path(cfg.mapping_dir) / f'mse_comparison_{cfg.dataset}_{cfg.model1.name}.png', dpi=300)
+    if file_path:
+        plt.savefig(file_path + '_mse_comparison.png', dpi=300)
     plt.show()
 
     # Plot mean MSE_loss vs. latent dimension, make them appear successively
-    reference = means['Affine']
-    means.pop('Affine')
+    reference = means.pop('Linear')
     for i in range(len(means) + 1):
         plt.plot(list(means.keys())[:i], list(means.values())[:i], 'o-')
         # disable x ticks
         plt.xticks([])
-        plt.xlabel('Model')
+        plt.xlabel('Mapping')
         plt.ylabel('Reconstruction Error')
         plt.axhline(y=reference, color='tab:orange', linestyle='--')
         plt.xlim([-0.25, len(means) - 0.75])
         plt.ylim([0, max([*means.values(), reference]) * 1.1])
         plt.tight_layout()
-        plt.savefig(Path(cfg.mapping_dir) / f'mse_overview_{cfg.dataset}_{cfg.model1.name}_{i}.png', dpi=300)
+        if file_path:
+            plt.savefig(file_path + f'_mse_overview_{i}.png', dpi=300)
         plt.show()
 
 
@@ -98,21 +118,19 @@ def get_model_files(folder):
     return [f for f in os.listdir(folder) if f.endswith(".pth")]
 
 
-def compute_losses(cfg, model1, model2, mapping, criterion):
-    latents, _ = get_test_latents(cfg)
-    latent_left, latent_right = latents.values()
+def compute_losses(cfg, model1, model2, mapping, criterion=None):
+    if criterion is None:
+        criterion = nn.MSELoss()
+    latent_left, latent_right, _ = get_test_latents(cfg)
     latent_left = latent_left.to(DEVICE)
     latent_right = latent_right.to(DEVICE)
     transformed_latent_space = mapping.transform(latent_left)
 
     decoded_left = model1.decode(latent_left).detach()
     decoded_right = model2.decode(latent_right).detach()
-    try:
-        decoded_transformed = model2.decode(transformed_latent_space.to(torch.float32).to(DEVICE)).detach()
-    except RuntimeError:
-        pass
+    decoded_transformed = model2.decode(transformed_latent_space.to(torch.float32).to(DEVICE)).detach()
 
-    dataset = get_dataset(cfg, 'model1', train=False)
+    dataset = get_dataset(cfg, cfg.model1.name, train=False)
 
     dataloader = DataLoader(dataset, batch_size=len(dataset), shuffle=False)
     for data in dataloader:
@@ -125,14 +143,14 @@ def compute_losses(cfg, model1, model2, mapping, criterion):
     return mse_loss, mse_loss_model1, mse_loss_model2
 
 
-def process_combinations(cfg, folder1, folder2, criterion):
+def process_combinations(cfg, folder1, folder2):
     if (Path(cfg.mapping_dir) / cfg.model1.name.upper() / "results.csv").exists():
         results = pd.read_csv(Path(cfg.mapping_dir) / cfg.model1.name.upper() / "results.csv")
         results_list = results.to_dict(orient="records")
         # remove columns with Unnamed
         results_list = [{key: value for key, value in result.items() if "Unnamed: 0" not in key} for result in results_list]
-        # drop results where mapping = Hybrid && noisy = True
-        # results_list = [result for result in results_list if not result["mapping"] == "Hybrid"]
+        # only keep results where mapping != Adaptive
+        # results_list = [result for result in results_list if not result["mapping"] == "Adaptive"]
     else:
         results_list = []
 
@@ -184,7 +202,7 @@ def process_combinations(cfg, folder1, folder2, criterion):
         cfg.model1.latent_size = latent_size1
         cfg.model2.path = folder2 / file2
         cfg.model2.latent_size = latent_size2
-        mse_loss, mse_loss_model1, mse_loss_model2 = compute_losses(cfg, model1, model2, mapping, criterion)
+        mse_loss, mse_loss_model1, mse_loss_model2 = compute_losses(cfg, model1, model2, mapping)
 
         # check for duplicates
         new_result = {
@@ -210,17 +228,16 @@ def process_combinations(cfg, folder1, folder2, criterion):
     return results_list
 
 
-@hydra.main(config_path="../config", config_name="config_plot")
+@hydra.main(version_base="1.1", config_path="../config", config_name="config_plot")
 def main(cfg):
     cfg.base_dir = Path(hydra.utils.get_original_cwd()).parent
     folder1 = cfg.base_dir / "models/checkpoints" / cfg.model1.name.upper() / cfg.dataset.upper()
     folder2 = cfg.base_dir / "models/checkpoints" / cfg.model2.name.upper() / cfg.dataset.upper()
-    criterion = nn.MSELoss()
 
-    results_list = process_combinations(cfg, folder1, folder2, criterion)
+    results_list = process_combinations(cfg, folder1, folder2)
     results = pd.DataFrame(results_list)
     results.to_csv(Path(cfg.mapping_dir) / cfg.model1.name.upper() / "results.csv", index=False)
-    plot_loss(cfg, results_list)
+    plot_loss(cfg.filters, results_list, str(Path(cfg.mapping_dir) / f'mse_comparison'))
 
 
 if __name__ == "__main__":

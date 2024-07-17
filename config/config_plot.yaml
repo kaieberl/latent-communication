@@ -26,6 +26,26 @@ combinations:
     hidden_size:
       - 0
     sampling:
+      - equally
+    latent_dim:
+      - 10
+      - 30
+  - num_samples:
+      - 50
+      - 100
+      - 200
+    mapping:
+      - Linear
+      - Affine
+    lambda:
+      - 0
+    dropout:
+      - False
+    noisy:
+      - False
+    hidden_size:
+      - 0
+    sampling:
       - convex_hull
     latent_dim:
       - 10
@@ -56,6 +76,7 @@ combinations:
       - 200
     mapping:
       - NeuralNetwork
+      - Adaptive
       - Hybrid
     lambda:
       - 0
@@ -67,7 +88,7 @@ combinations:
       - 16
       - 128
     sampling:
-      - convex_hull
+      - equally
     latent_dim:
       - 10
       - 30
@@ -88,11 +109,43 @@ combinations:
       - 16
       - 128
     sampling:
+      - equally
+    latent_dim:
+      - 10
+      - 30
+  - num_samples:
+      - 500
+    mapping:
+      - Decouple
+    lambda:
+      - 0.1
+    dropout:
+      - False
+    noisy:
+      - False
+    hidden_size:
+      - 0
+    sampling:
       - convex_hull
     latent_dim:
       - 10
       - 30
 filters:
+  - name: Linear
+    mapping: Linear
+    lambda: 0
+    hidden_size: 0
+    sampling: equally
+  - name: Affine
+    mapping: Affine
+    lambda: 0
+    hidden_size: 0
+    sampling: equally
+  - name: Decoupled
+    mapping: Decouple
+    lambda: 0.1
+    hidden_size: 0
+    sampling: convex_hull
   - name: MLP (baseline)
     mapping: NeuralNetwork
     lambda: 0
@@ -110,30 +163,27 @@ filters:
     hidden_size: 16
     sampling: convex_hull
   - name: |
+      + uncertainty based
+      relaxation
+    mapping: Adaptive
+    lambda: 0
+    dropout: True
+    hidden_size: 128
+    sampling: equally
+  - name: |
       + dropout,
       hidden size 128
     mapping: NeuralNetwork
     lambda: 0
     dropout: True
     hidden_size: 128
-    sampling: convex_hull
+    sampling: equally
   - name: |
-      + noisy ReLU,
-      hidden size 128
-    mapping: NeuralNetwork
-    lambda: 0
-    noisy: True
-    hidden_size: 128
-    sampling: convex_hull
-  - name: Affine + MLP
+      Linear + MLP
+      + dropout
     mapping: Hybrid
     lambda: 0
-    dropout: False
-    noisy: True
+    dropout: True
+    noisy: False
     hidden_size: 128
-    sampling: convex_hull
-  - name: Affine
-    mapping: Affine
-    lambda: 0
-    hidden_size: 0
-    sampling: convex_hull
+    sampling: equally

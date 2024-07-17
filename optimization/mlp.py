@@ -17,7 +17,7 @@ class NoisyReLU(nn.Module):
 
 
 class MLP(LightningModule):
-    def __init__(self, source_dim, hidden_dim, target_dim, learning_rate, lamda, dropout=0.3, noise_sigma=0.1) -> None:
+    def __init__(self, source_dim, hidden_dim, target_dim, learning_rate, lamda, dropout=0, noise_sigma=0) -> None:
         super().__init__()
         self.hidden_dim = hidden_dim
         self.learning_rate = learning_rate

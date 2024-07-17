@@ -102,13 +102,13 @@ class PocketAutoencoder(LightningBaseModel):
         self.apply(init_weights)
 
     def training_step(self, batch):
-        x = batch
+        x, _ = batch
         x_hat = self.forward(x)
         loss = F.mse_loss(x_hat, x)
         return loss
 
     def validation_step(self, batch):
-        x = batch
+        x, _ = batch
         x_hat = self.forward(x)
         loss = F.mse_loss(x_hat, x)
         return loss
