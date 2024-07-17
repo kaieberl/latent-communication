@@ -122,34 +122,11 @@ def sample_convex_hull(dataloader, model, train_samples, val_samples=5000):
     return train_indices, latents[train_indices], labels[train_indices], val_indices, latents[val_indices], labels[val_indices]
 
 
-def sample_uniformly(dataloader, model, n_samples, val_samples=5000):
-    """Get training samples uniformly sampled, validation samples uniformly sampled
+def sample_uncertainty(dataloader, model, mapping):
+    """Get training samples that have highest uncertainty, validation samples uniformly sampled.
     """
     model.eval()
-    latents = []
-    labels = []
-    for images, targets in dataloader:
-        images = images.to(model.device)
-        latents_batch = model.get_latent_space(images).detach()
-        latents.append(latents_batch)
-        labels.append(targets)
-    latents = torch.cat(latents, dim=0)
-    labels = torch.cat(labels, dim=0)
-
-    indices = np.random.choice(len(latents), n_samples, replace=False)
-    train_indices = indices
-    all_indices = np.arange(len(labels))
-    remaining_indices = np.setdiff1d(all_indices, train_indices)
-    val_indices = np.random.choice(remaining_indices, val_samples, replace=False)
-
-    return train_indices, latents[train_indices], labels[train_indices], val_indices, latents[val_indices], labels[val_indices]
-
-
-# def sample_uncertainty(dataloader, model, mapping):
-#     """Get training samples that have highest uncertainty, validation samples uniformly sampled.
-#     """
-#     model.eval()
-#     uncertainty = mapping.get_uncertainty()
+    uncertainty = mapping.get_uncertainty()
 
 
 def sample_convex_hulls_images(n_samples, images, labels, model, seed=0, device="cpu", pca_components=3):

@@ -11,6 +11,9 @@ def load_mapping(path, mapping):
     elif mapping.lower() == 'decouple':
         from optimization.optimizer import DecoupleFitting
         mapping = DecoupleFitting.from_file(path)
+    elif mapping.lower() == 'decoupleaffine':
+        from optimization.optimizer import DecoupleFitting
+        mapping = DecoupleFitting.from_file(path, "Affine")
     elif mapping.lower() == 'adaptive':
         from optimization.optimizer import AdaptiveFitting
         mapping = AdaptiveFitting.from_file(path)

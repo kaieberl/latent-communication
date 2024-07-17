@@ -1,4 +1,3 @@
-import pickle
 from pathlib import Path
 from typing import Union
 
@@ -14,7 +13,7 @@ from sklearn.preprocessing import StandardScaler
 from optimization.base_optimizer import BaseOptimizer
 from optimization.bayesian_linear import BayesianLinearRegression
 from optimization.mlp import MLP
-from optimization.affinemodel import AffineModel
+from optimization.model_decouple import AffineModel, LinearModel
 
 
 class AffineFitting(BaseOptimizer):
@@ -587,7 +586,7 @@ class HybridFitting(BaseOptimizer):
 
 
 class DecoupleFitting(BaseOptimizer):
-    def __init__(self, z1, z2, lamda, learning_rate=0.01, epochs=200, do_print=True):
+    def __init__(self, z1, z2, lamda, learning_rate=0.01, epochs=200, do_print=True, mapping_type="Linear"):
         """
         Initializes the DecoupleFitting class.
 
@@ -607,8 +606,12 @@ class DecoupleFitting(BaseOptimizer):
         self.lamda = lamda
         self.learning_rate = learning_rate
         self.do_print = do_print
-
-        self.mapping = AffineModel(self.z1.shape[1], self.z2.shape[1], lamda, learning_rate)
+        if mapping_type == "Linear":
+            self.mapping = LinearModel(self.z1.shape[1], self.z2.shape[1], lamda, learning_rate)
+        elif mapping_type == "Affine":
+            self.mapping = AffineModel(self.z1.shape[1], self.z2.shape[1], lamda, learning_rate)
+        else:
+            raise ValueError(f"Mapping type {mapping_type} not recognized")
 
     def fit(self):
         """
@@ -661,11 +664,14 @@ class DecoupleFitting(BaseOptimizer):
         if isinstance(z1, np.ndarray):
             z1 = torch.tensor(z1, dtype=torch.float32)
         with torch.no_grad():
-            z1_transformed = z1 @ self.mapping.A1.detach().T
+            if self.mapping_type == "Linear":
+                z1_transformed = z1 @ self.mapping.A1.detach().T
+            elif self.mapping_type == "Affine":
+                z1_transformed = z1 @ self.mapping.A1.detach().T + self.mapping.b1.detach()
         return z1_transformed
 
     @classmethod
-    def from_file(cls, path):
+    def from_file(cls, path, mapping_type="Linear"):
         """
         Loads the results of the optimization problem from a file.
 
@@ -683,10 +689,11 @@ class DecoupleFitting(BaseOptimizer):
         latent_dim1 = model_state_dict['A1'].size(1)  # get latent_dim1 from A1
         latent_dim2 = model_state_dict['A1'].size(0)  # get latent_dim2 from A1
         lamda = model_state_dict.get('lamda', 0)  # get lambda from model_state_dict or default to 0
-        learning_rate = model_state_dict.get('learning_rate',
-                                             0.01)  # get learning_rate from model_state_dict or default to 0.01
-
-        instance.mapping = AffineModel(latent_dim1, latent_dim2, lamda, learning_rate)
-        instance.mapping.load_state_dict(model_state_dict)
-
+        learning_rate = model_state_dict.get('learning_rate', 0.01)  # get learning_rate from model_state_dict or default to 0.01
+        if mapping_type == "Linear":
+            instance.mapping = LinearModel(latent_dim1, latent_dim2, lamda, learning_rate)
+            instance.mapping.load_state_dict(model_state_dict)
+        elif mapping_type == "Affine":
+            instance.mapping = AffineModel(latent_dim1, latent_dim2, lamda, learning_rate)
+            instance.mapping.load_state_dict(model_state_dict)
         return instance
