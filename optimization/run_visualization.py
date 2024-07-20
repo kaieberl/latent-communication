@@ -71,7 +71,7 @@ def main(cfg: DictConfig):
 
     # Plot the results
     print(f"Mean error for {cfg.mapping} mapping: {np.mean(np.linalg.norm(latents2 - latents1_trafo, axis=1)):.4f}")
-    cfg.storage_path = cfg.base_dir / "results/transformations/figures_" / cfg.model1.name.upper()
+    cfg.storage_path = cfg.base_dir / "results/transformations/figures" / cfg.model1.name.upper()
     if not cfg.storage_path.exists():
         cfg.storage_path.mkdir(parents=True)
     visualize_latent_space(latents1, labels,
