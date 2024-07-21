@@ -1,5 +1,5 @@
 directory_to_explore: ${base_dir}/results/transformations/mapping_files/PCKTAE
-filters: FMNIST
+filters: FMNIST.Decouple.equally
 output_name: PCKT_FMNIST
 base_dir: .
 path_to_test_file: ${base_dir}/results/transformations/calculations_databases/PCKTAE

@@ -118,8 +118,8 @@ class VAE(LightningBaseModel):
         """
         Decodes the latent space representation
         """
-
-        return self.decoder(z)
+        x = self.decoder(z)
+        return x
 
     def reparameterize(self, mu, logvar):
         """

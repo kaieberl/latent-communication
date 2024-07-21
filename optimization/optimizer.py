@@ -596,7 +596,7 @@ class HybridFitting(BaseOptimizer):
 
 
 class DecoupleFitting(BaseOptimizer):
-    def __init__(self, z1, z2, lamda, learning_rate=0.01, epochs=200, do_print=True, mapping_type="Linear"):
+    def __init__(self, z1, z2, lamda, learning_rate=0.01, epochs=200, do_print=False,mapping_type ="Linear"):
         """
         Initializes the DecoupleFitting class.
 
@@ -650,7 +650,6 @@ class DecoupleFitting(BaseOptimizer):
         """
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         torch.save(self.mapping.state_dict(), str(path) + '.pth')
-        print("Model saved at ", path)
 
     def print_results(self):
         """

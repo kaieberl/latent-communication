@@ -45,8 +45,9 @@ from utils.model import load_model
 
 DEVICE = (
     torch.device("cuda")
-    if torch.cuda.is_available()
-    else torch.device("mps") if torch.backends.mps.is_available() else "cpu"
+    if torch.cuda.is_available() else
+    'cpu' if torch.backends.mps.is_available()
+    else "cpu"
 )
 hydra.core.global_hydra.GlobalHydra.instance().clear()
 
@@ -81,54 +82,13 @@ except FileNotFoundError as e:
     print(e)
     
     
-def save_dataframes(results_list_classes, output_name):
-    """
-    Save the dataframes to the results folder.
-
-    Args:
-        results_top_df (pd.DataFrame): The dataframe containing the top indices information.
-        results_class_df (pd.DataFrame): The dataframe containing the class-wise MSE losses.
-        error_distribution_df (pd.DataFrame): The dataframe containing the error distribution information.
-        output_name (str): The name of the output files.
-
-    Returns:
-        None
-    """
-    results_class_df = pd.DataFrame(results_list_classes)
-    #check if the file already exists
-    if os.path.exists("results/transformations/calculations_databases/" + output_name + "_top.csv"):
-
-        results_class_df.to_csv(
-            "results/transformations/calculations_databases/" + output_name + "_class.csv",
-            mode="a",
-            header=False, sep="#"
-        )
-    
-    else:
-
-        results_class_df.to_csv(
-            "results/transformations/calculations_databases/" + output_name + "_class.csv", sep="#"
-        )
-
-    return []
-
-def create_old_datasets(directory_to_explore):
-    '''
-    Create the old datasets based on the given directory to explore.
-    '''
-    dataframe = pd.read_csv(directory_to_explore)
-    #drop all columns that are not names
-    dataframe = dataframe[['model1', 'model2', 'sampling_strategy', 'mapping', 'num_samples', 'lambda']]
-    #dataframe join the columns toghtether in a single column of strings
-    dataframe['combined'] = dataframe[['sampling_strategy', 'mapping', 'num_samples', 'lambda']].astype(str).agg('_'.join, axis=1) 
-    dataframe = dataframe[['model1', 'model2','combined']].astype(str).agg('>'.join, axis=1)
-    return dataframe
-    
-    
 def criterion(prediction, images):
     with torch.no_grad():
         errors = nn.MSELoss(reduction='none')(prediction, images)  # Assign loss to 'errors'
-        errors = torch.mean(errors, dim=(1, 2, 3))  # Average across channels and spatial dimensions
+        if images.size()[-1] == 28:
+            errors = torch.mean(errors, dim=(1, 2, 3)) 
+        if images.size()[-1] == 784:
+            errors = torch.mean(errors, dim=1)
         return errors
 
 
@@ -150,30 +110,19 @@ def create_datasets(filters, directory_to_explore, output_name):
     # Initialize old data information to avoid repeated loading
     data_info_1_old, data_info_2_old, name_dataset1_old = None, None, None
 
-#    old_list = create_old_datasets(current_dir)
+    # Old_list = create_old_datasets(current_dir)
 
     list_va = [file for file in results_list_explore if all(x in file for x in filters)]
     list_va = sorted(list_va)
     # Loopcount
     iteration = tqdm(list_va, desc="Processing files", position=0, leave=True)
 
-    top_indices_model1, top_indices_model2, low_indices_model2, low_indices_model1 = (
-        [],
-        [],
-        [],
-        [],
-    )
-    
-
-    
-    count = 0
     # Loop through files and process
     for file in iteration:
         file = file[:-4]
         torch.no_grad()
         iteration.set_description(f"Processing {file}")
         data_info_1, data_info_2, trans_info = file.split(">")
-        mean_1, variance_1, mean_2, variance_2 = [], [], [], []
         # This is actually just to check if the Ddataset has changed (which is unlikely)
         if name_dataset1_old != data_info_1.split("_")[0]:
             name_dataset1, name_model1, size_of_the_latent1, seed1 = data_info_1.split(
@@ -201,20 +150,7 @@ def create_datasets(filters, directory_to_explore, output_name):
             ).to(DEVICE).eval()
             latent_left = model1.get_latent_space(images).float()
             decoded_left = model1.decode(latent_left).to(DEVICE).float()
-            #calculate all the errors
             errors_by_image_model_1 = criterion(decoded_left, images).detach().cpu().numpy()
-            #couple each error with its index
-            sorted_indices_model1 = np.argsort(errors_by_image_model_1)
-            
-            num_top_indices = int(np.ceil(errors_by_image_model_1.size * 0.01))
-            top_indices_model1, low_indices_model1 =  [], []
-            for i in range(n_classes):
-                indices = class_indices[i]
-                filtered_indices = [idx for idx in sorted_indices_model1 if idx in indices]
-                top_indices_model1.append([idx for idx in filtered_indices[-num_top_indices:]])
-                low_indices_model1.append([idx for idx in filtered_indices[:num_top_indices]])
-                mean_1.append(np.mean(errors_by_image_model_1[indices]))
-                variance_1.append(np.var(errors_by_image_model_1[indices]))
 
         if data_info_2_old != data_info_2:
             name_dataset2, name_model2, size_of_the_latent2, seed2 = data_info_2.split(
@@ -231,19 +167,7 @@ def create_datasets(filters, directory_to_explore, output_name):
             latent_right = model2.get_latent_space(images).to(DEVICE).float()
             decoded_right = model2.decode(latent_right).to(DEVICE).float()
             errors_by_image_model_2 = criterion(decoded_right, images).detach().cpu().numpy()
-            #couple each error with its index
-            sorted_indices_model2 = np.argsort(errors_by_image_model_2)
             
-            num_top_indices = int(np.ceil(errors_by_image_model_2.size * 0.03))
-            top_indices_model2, low_indices_model2 =  [], []
-            for i in range(n_classes):
-                indices = class_indices[i]
-                filtered_indices = [idx for idx in sorted_indices_model2 if idx in indices]
-                top_indices_model2.append([idx for idx in filtered_indices[-num_top_indices:]])
-                low_indices_model2.append([idx for idx in filtered_indices[:num_top_indices]])
-                mean_2.append(np.mean(errors_by_image_model_2[indices]))
-                variance_2.append(np.var(errors_by_image_model_2[indices]))
-
         # Process transformations
         list_info_trans = trans_info.split("_")
         mapping_name, num_samples, lamda_t = (
@@ -253,17 +177,14 @@ def create_datasets(filters, directory_to_explore, output_name):
         )
         sampling_strategy = "_".join(list_info_trans)
         mapping = load_mapping(directory_to_explore + "/" + file, mapping_name)
-        transformed_latent_space = torch.tensor(
-            mapping.transform(latent_left), dtype=torch.float32
-        ).to(DEVICE)
+        transformed_latent_space = mapping.transform(latent_left).clone().detach().to(DEVICE).to(torch.float32)
 
 
         # Decode latents
         decoded_transformed = model2.decode(transformed_latent_space).to(DEVICE).float()
         # Calculate reconstruction errors
         errors_by_image_stiched = criterion(decoded_transformed, images).detach().cpu().numpy()
-
-
+        
         # Record top and bottom indices information
         for i in range(n_classes):
             indices = class_indices[i]
@@ -287,11 +208,7 @@ def create_datasets(filters, directory_to_explore, output_name):
                     "class": i,
                 }
             )
-        if count%50 == 0:
-            results_list_classes = save_dataframes(
-                results_list_classes, output_name=output_name
-            )
-        count += 1
+
     return results_list_classes
 
 
@@ -316,7 +233,7 @@ def main(cfg: DictConfig) -> None:
     results_class_df.to_csv(
         "results/transformations/calculations_databases/"
         + cfg.output_name
-        + "_class.csv", mode="a", header=False, sep="#"
+        + "_class.csv", header=False, sep="#"
     )
 
 
