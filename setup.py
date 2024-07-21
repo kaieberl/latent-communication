@@ -15,7 +15,7 @@ setup(
         'lightning',
         'pandas',
         'matplotlib',
-        'scikit-learn'
+        'scikit-learn',
         'tqdm',
         'tensorboard',
         'pytorch-lightning',
